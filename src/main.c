@@ -41,7 +41,7 @@ int main (int argc, char *argv[])
   	gchar alias_buff [8];
   	sprintf (alias_buff, "media_%d", i);
 
-  	medias[i-1] = mb_media_new (argv[1], alias_buff);
+  	medias[i-1] = mb_media_new (argv[i], alias_buff);
   }
 
   for (i = 0; i < n; i++)

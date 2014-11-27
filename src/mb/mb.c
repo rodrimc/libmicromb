@@ -10,10 +10,9 @@
 #include "util.h"
 
 #include <stdlib.h>
-
+#include <string.h>
 #include <assert.h>
 
-static MbData _global;
 
 int
 mb_init ()
@@ -27,27 +26,13 @@ mb_init ()
 
 	_global.pipeline = gst_pipeline_new ("pipeline");
 
-	//audio
-//	_global.audio_mixer = gst_element_factory_make ("adder", "audiomixer");
-//	_global.audio_sink = gst_element_factory_make ("autoaudiosink", "audiosink");
+	_global.video_mixer = NULL;
+	_global.audio_mixer = NULL;
+	_global.video_sink  = NULL;
+	_global.audio_sink  = NULL;
 
-
-//	if (!_global.pipeline || !_global.video_sink ||
-//			!_global.audio_mixer || !_global.audio_sink)
-//	{
-//		g_printerr ("Could not create the pipeline element.\n");
-//		mb_clean_up();
-//		return -1;
-//	}
-
-//	gst_bin_add_many(GST_BIN(_global.pipeline), _global.video_sink, NULL);
-//									 _global.audio_mixer, _global.audio_sink, NULL);
-//	if (!gst_element_link(_global.audio_mixer, _global.audio_sink))
-//	{
-//		g_printerr ("Could not link audio mixer and audio sink together.\n");
-//		mb_clean_up();
-//		return -1;
-//	}
+	_global.video_init  = 0;
+	_global.audio_init  = 0;
 
 	ret = gst_element_set_state (_global.pipeline, GST_STATE_PLAYING);
 	if (ret == GST_STATE_CHANGE_FAILURE)
@@ -56,7 +41,6 @@ mb_init ()
 		return -1;
 	}
 
-
 	return 0;
 }
 
@@ -64,29 +48,28 @@ MbMedia *
 mb_media_new (const gchar *uri, const gchar *media_alias)
 {
 	GstElement *media_bin = NULL, *uri_decoder = NULL;
+	size_t m_lenght;
 	MbMedia *media;
-	static Context context;
 
 	media_bin = gst_bin_new (media_alias);
 	uri_decoder = gst_element_factory_make ("uridecodebin", NULL);
 
+	m_lenght = strlen(media_alias);
+
 
 	media = (MbMedia *) malloc (sizeof (MbMedia));
-	media->name = media_alias;
+	media->name = (char *) malloc ((m_lenght + 1)  * sizeof (char));
+	strcpy(media->name, media_alias);
+
 	media->decoder = GST_ELEMENT_NAME(uri_decoder);
 
 	media->video_filter = NULL;
 	media->video_scaler = NULL;
 	media->audio_converter = NULL;
 
-	context.media = media;
-	context.bin = media_bin;
-	context.p_global = &_global;
-
-
 	g_object_set (uri_decoder, "uri", uri, NULL);
 	g_signal_connect (uri_decoder, "pad-added", G_CALLBACK (pad_added_handler),
-											&context);
+											media);
 
 	gst_bin_add (GST_BIN(media_bin), uri_decoder);
 	gst_bin_add (GST_BIN(_global.pipeline), media_bin);
@@ -111,13 +94,6 @@ mb_media_start (MbMedia *media)
 		return -1;
 	}
 
-  if (!gst_element_seek (element, 1.0, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH,
-                         GST_SEEK_TYPE_SET, 0,
-                         GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE)) {
-    g_print ("Seek failed!\n");
-  }
-
-
 	return 0;
 }
 
@@ -132,7 +108,13 @@ mb_media_free (MbMedia *media)
 {
 	if (media)
 	{
+		g_free (media->name);
+		g_free (media->decoder);
+		g_free (media->video_scaler);
+		g_free (media->video_filter);
+		g_free (media->audio_converter);
 		free (media);
+
 		media = NULL;
 	}
 }

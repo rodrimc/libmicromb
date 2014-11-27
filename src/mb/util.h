@@ -29,18 +29,20 @@ typedef struct
 	//sinks
 	GstElement *video_sink;
 	GstElement *audio_sink;
+
+	int video_init;
+	int audio_init;
 } MbData;
 
-typedef struct
-{
-	MbMedia *media;
-	GstElement *bin;
-
-	MbData *p_global;
-} Context;
-
+MbData _global;
 
 void
-pad_added_handler (GstElement *src, GstPad *new_pad, Context *context);
+pad_added_handler (GstElement *src, GstPad *new_pad, MbMedia *media);
+
+int
+set_audio_elements ();
+
+int
+set_video_elements ();
 
 #endif /* UTIL_H_ */

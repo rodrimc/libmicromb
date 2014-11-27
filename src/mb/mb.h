@@ -13,22 +13,22 @@
 
 typedef struct
 {
-	const char *name;
-	const char *decoder;
+	gchar *name;
+	gchar *decoder;
 
 	//video
-	const char *video_scaler;
-	const char *video_filter;
+	gchar *video_scaler;
+	gchar *video_filter;
 
 	//audio
-	const char *audio_converter;
+	gchar *audio_converter;
 } MbMedia;
 
 int
 mb_init ();
 
 MbMedia *
-mb_media_new (const gchar *uri, const gchar *media_name);
+mb_media_new (const char *uri, const char *media_name);
 
 int
 mb_media_start (MbMedia *media);
