@@ -30,8 +30,11 @@ typedef struct
 	GstElement *video_sink;
 	GstElement *audio_sink;
 
-	int video_init;
-	int audio_init;
+	int v_init;
+	int a_init;
+
+	GMutex v_mutex;
+	GMutex a_mutex;
 } MbData;
 
 MbData _global;

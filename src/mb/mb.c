@@ -31,8 +31,8 @@ mb_init ()
 	_global.video_sink  = NULL;
 	_global.audio_sink  = NULL;
 
-	_global.video_init  = 0;
-	_global.audio_init  = 0;
+	_global.v_init  = 0;
+	_global.a_init  = 0;
 
 	ret = gst_element_set_state (_global.pipeline, GST_STATE_PLAYING);
 	if (ret == GST_STATE_CHANGE_FAILURE)

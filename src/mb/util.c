@@ -8,8 +8,6 @@
 
 #include "util.h"
 
-static GMutex mutex;
-
 void
 pad_added_handler (GstElement *src, GstPad *new_pad, MbMedia *media)
 {
@@ -58,6 +56,8 @@ set_video_elements ()
 	gst_bin_add(GST_BIN (_global.pipeline), _global.video_sink);
 	gst_element_set_state(_global.video_sink, GST_STATE_PLAYING);
 
+	_global.v_init = 1;
+
 	return 0;
 }
 
@@ -88,6 +88,8 @@ set_audio_elements ()
 	gst_element_set_state(_global.audio_mixer, GST_STATE_PLAYING);
 	gst_element_set_state(_global.audio_sink, GST_STATE_PLAYING);
 
+	_global.a_init = 1;
+
 	return 0;
 }
 
@@ -100,14 +102,22 @@ set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 	int width = 680, height = 480;
 
 	//Create video sink on demand
-	g_mutex_lock (&mutex);
-	if (!_global.video_sink && set_video_elements() != 0)
+
+	//The following test is for optimization purposes: there's no
+	//need to always try the lock, because the 'set_video_elements'
+	//function should execute only once as soon as the first video
+	//stream is decoded.
+	if (_global.v_init == 0)
 	{
-		g_mutex_unlock (&mutex);
-		g_printerr ("Unable to set video sink\n");
-		return -1;
+		g_mutex_lock (&_global.v_mutex);
+		if (!_global.video_sink && set_video_elements() != 0)
+		{
+			g_mutex_unlock (&_global.v_mutex);
+			g_printerr ("Unable to set video sink\n");
+			return -1;
+		}
+		g_mutex_unlock (&_global.v_mutex);
 	}
-	g_mutex_unlock (&mutex);
 
 	video_scaler = gst_element_factory_make ("videoscale", NULL);
 	caps_filter = gst_element_factory_make ("capsfilter", NULL);
@@ -188,14 +198,20 @@ set_audio_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 	GstPad *sink_pad = NULL, *ghost_pad = NULL, *output_sink_pad = NULL;
 
 	//Create video sink on demand
-	g_mutex_lock (&mutex);
-	if (!_global.audio_sink && set_audio_elements () != 0)
+
+	//The following test is also for optimization purposes
+	//(see the comments on function set_video_bin).
+	if (_global.a_init == 0)
 	{
-		g_printerr ("Unable to set video sink\n");
-		g_mutex_unlock (&mutex);
-		return -1;
+		g_mutex_lock (&_global.a_mutex);
+		if (!_global.audio_sink && set_audio_elements () != 0)
+		{
+			g_printerr ("Unable to set video sink\n");
+			g_mutex_unlock (&_global.a_mutex);
+			return -1;
+		}
+		g_mutex_unlock (&_global.a_mutex);
 	}
-	g_mutex_unlock (&mutex);
 
 	audio_converter = gst_element_factory_make ("audioconvert", NULL);
 
