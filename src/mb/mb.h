@@ -11,16 +11,35 @@
 
 #include <gst/gst.h>
 
+typedef struct
+{
+	const char *name;
+	const char *decoder;
+
+	//video
+	const char *video_scaler;
+	const char *video_filter;
+
+	//audio
+	const char *audio_converter;
+} MbMedia;
+
 int
 mb_init ();
 
-GstElement *
-mb_add_media (const gchar *uri, const gchar *media_alias);
+MbMedia *
+mb_media_new (const gchar *uri, const gchar *media_name);
 
 int
-mb_start (GstElement* element);
+mb_media_start (MbMedia *media);
 
 GstBus *
 mb_get_message_bus ();
+
+void
+mb_media_free (MbMedia *media);
+
+void
+mb_clean_up ();
 
 #endif /* MB_H_ */
