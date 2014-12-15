@@ -11,37 +11,21 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
+
+#define DEFAULT_WINDOW_WIDTH 1920
+#define DEFAULT_WINDOW_HEIGHT 1080
 
 
 int
 mb_init ()
 {
-	GstStateChangeReturn ret;
-	if (!gst_init_check(NULL, NULL, NULL))
-	{
-		g_printerr ("Failed to initialize gstreamer...\n");
-		return -1;
-	}
+	return init (DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
+}
 
-	_global.pipeline = gst_pipeline_new ("pipeline");
-
-	_global.video_mixer = NULL;
-	_global.audio_mixer = NULL;
-	_global.video_sink  = NULL;
-	_global.audio_sink  = NULL;
-
-	_global.v_init  = 0;
-	_global.a_init  = 0;
-
-	ret = gst_element_set_state (_global.pipeline, GST_STATE_PLAYING);
-	if (ret == GST_STATE_CHANGE_FAILURE)
-	{
-		mb_clean_up ();
-		return -1;
-	}
-
-	return 0;
+int
+mb_init_args (int width, int height)
+{
+	return init (width, height);
 }
 
 MbMedia *
@@ -81,20 +65,23 @@ int
 mb_media_start (MbMedia *media)
 {
 	GstStateChange ret;
+	GstElement *element;
 
-	assert (media != NULL);
-	GstElement *element = gst_bin_get_by_name (GST_BIN(_global.pipeline),
-	                                               media->name);
+	g_assert (media != NULL);
 
-	if (!element) return -1;
+	element = gst_bin_get_by_name (GST_BIN(_global.pipeline), media->name);
+	g_assert (element);
 
 	ret = gst_element_set_state (element, GST_STATE_PLAYING);
+
+	gst_object_unref(element);
+
 	if (ret == GST_STATE_CHANGE_FAILURE)
 	{
-		return -1;
+		return FAILURE;
 	}
 
-	return 0;
+	return SUCCESS;
 }
 
 GstBus *
@@ -106,17 +93,72 @@ mb_get_message_bus ()
 void
 mb_media_free (MbMedia *media)
 {
-	if (media)
-	{
-		g_free (media->name);
-		g_free (media->decoder);
-		g_free (media->video_scaler);
-		g_free (media->video_filter);
-		g_free (media->audio_converter);
-		free (media);
+	g_assert (media != NULL);
 
-		media = NULL;
+	g_free (media->name);
+	g_free (media->decoder);
+	g_free (media->video_scaler);
+	g_free (media->video_filter);
+	g_free (media->audio_converter);
+	free (media);
+
+	media = NULL;
+}
+
+int
+mb_media_set_size_property (MbMedia *media, const char *property, int value)
+{
+	GstElement *video_filter = NULL;
+	GstCaps *current_caps = NULL, *new_caps = NULL;
+	GstStructure *current_str = NULL, *new_str = NULL;
+	GstPad *filter_sink_pad = NULL;
+	GValue g_value = G_VALUE_INIT;
+	int up, down;
+
+	g_assert (media != NULL);
+
+	if (!media->video_filter)
+	{
+		g_printerr ("Video stream not found\n");
+		return FAILURE;
 	}
+
+	g_value_init (&g_value, G_TYPE_INT);
+	g_value_set_int (&g_value, value);
+
+	video_filter = gst_bin_get_by_name (GST_BIN (_global.pipeline),
+																media->video_filter);
+	g_assert (video_filter);
+
+	filter_sink_pad = gst_element_get_static_pad(video_filter, "sink");
+	g_assert (filter_sink_pad);
+
+	current_caps = gst_pad_get_current_caps(filter_sink_pad);
+	g_assert (current_caps);
+
+//	current_str = gst_caps_get_structure(current_caps, 0);
+//	gst_structure_get_int (current_str, "width", &up);
+//	g_printf ("Current height: %d\n", up);
+
+	new_caps = gst_caps_copy(current_caps);
+	g_assert(new_caps);
+	gst_caps_set_value(new_caps, property, &g_value);
+
+
+//	new_str = gst_caps_get_structure(new_caps, 0);
+//	gst_structure_get_int (new_str, "width", &up);
+//	g_printf ("New height: %d\n", up);
+
+
+	g_object_set (G_OBJECT(video_filter), "caps", new_caps, NULL);
+
+	//Cleaning up
+	g_value_unset (&g_value);
+	gst_caps_unref(current_caps);
+	gst_caps_unref(new_caps);
+	gst_object_unref(video_filter);
+
+	return SUCCESS;
 }
 
 void

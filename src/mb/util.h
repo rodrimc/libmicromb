@@ -35,12 +35,18 @@ typedef struct
 
 	GMutex v_mutex;
 	GMutex a_mutex;
+
+	int window_height;
+	int window_width;
 } MbData;
 
 MbData _global;
 
 void
 pad_added_handler (GstElement *src, GstPad *new_pad, MbMedia *media);
+
+int
+init (int width, int height);
 
 int
 set_audio_elements ();
