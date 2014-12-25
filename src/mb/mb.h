@@ -25,6 +25,14 @@ typedef struct
 
 	//audio
 	gchar *audio_converter;
+
+	//pads
+	gchar *video_pad_name;
+	gchar *audio_pad_name;
+
+	//properties
+	gint x_pos;
+	gint y_pos;
 } MbMedia;
 
 /*
@@ -58,6 +66,16 @@ mb_media_free (MbMedia *media);
  */
 int
 mb_media_set_size_property (MbMedia *media, const char *property, int value);
+
+/*
+ * \brief Set the media position
+ * 	@param media Media pointer to change the property value
+ * 	@param x New x value
+ * 	@param y New y value
+ *
+ */
+int
+mb_media_set_pos (MbMedia *media, int x, int y);
 
 /*
  * \brief Starts a media

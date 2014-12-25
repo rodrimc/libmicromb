@@ -50,6 +50,8 @@ mb_media_new (const gchar *uri, const gchar *media_alias)
 	media->video_filter = NULL;
 	media->video_scaler = NULL;
 	media->audio_converter = NULL;
+	media->video_pad_name = NULL;
+	media->audio_pad_name = NULL;
 
 	g_object_set (uri_decoder, "uri", uri, NULL);
 	g_signal_connect (uri_decoder, "pad-added", G_CALLBACK (pad_added_handler),
@@ -90,30 +92,13 @@ mb_get_message_bus ()
 	return gst_element_get_bus (_global.pipeline);
 }
 
-void
-mb_media_free (MbMedia *media)
-{
-	g_assert (media != NULL);
-
-	g_free (media->name);
-	g_free (media->decoder);
-	g_free (media->video_scaler);
-	g_free (media->video_filter);
-	g_free (media->audio_converter);
-	free (media);
-
-	media = NULL;
-}
-
 int
 mb_media_set_size_property (MbMedia *media, const char *property, int value)
 {
 	GstElement *video_filter = NULL;
 	GstCaps *current_caps = NULL, *new_caps = NULL;
-	GstStructure *current_str = NULL, *new_str = NULL;
 	GstPad *filter_sink_pad = NULL;
 	GValue g_value = G_VALUE_INIT;
-	int up, down;
 
 	g_assert (media != NULL);
 
@@ -136,19 +121,9 @@ mb_media_set_size_property (MbMedia *media, const char *property, int value)
 	current_caps = gst_pad_get_current_caps(filter_sink_pad);
 	g_assert (current_caps);
 
-//	current_str = gst_caps_get_structure(current_caps, 0);
-//	gst_structure_get_int (current_str, "width", &up);
-//	g_printf ("Current height: %d\n", up);
-
 	new_caps = gst_caps_copy(current_caps);
 	g_assert(new_caps);
 	gst_caps_set_value(new_caps, property, &g_value);
-
-
-//	new_str = gst_caps_get_structure(new_caps, 0);
-//	gst_structure_get_int (new_str, "width", &up);
-//	g_printf ("New height: %d\n", up);
-
 
 	g_object_set (G_OBJECT(video_filter), "caps", new_caps, NULL);
 
@@ -160,6 +135,24 @@ mb_media_set_size_property (MbMedia *media, const char *property, int value)
 
 	return SUCCESS;
 }
+
+void
+mb_media_free (MbMedia *media)
+{
+	g_assert (media != NULL);
+
+	g_free (media->name);
+	g_free (media->decoder);
+	g_free (media->video_scaler);
+	g_free (media->video_filter);
+	g_free (media->audio_converter);
+	g_free (media->video_pad_name);
+	g_free (media->audio_pad_name);
+	free (media);
+
+	media = NULL;
+}
+
 
 void
 mb_clean_up ()

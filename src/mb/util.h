@@ -12,11 +12,6 @@
 #include <gst/gst.h>
 #include "mb.h"
 
-/*
- * TODO:
- * 	-> add 'videomixer' to the pipeline before 'video_sink'
- */
-
 typedef struct
 {
 	//pipeline
@@ -30,10 +25,8 @@ typedef struct
 	GstElement *video_sink;
 	GstElement *audio_sink;
 
-	int v_init;
 	int a_init;
 
-	GMutex v_mutex;
 	GMutex a_mutex;
 
 	int window_height;
@@ -50,8 +43,5 @@ init (int width, int height);
 
 int
 set_audio_elements ();
-
-int
-set_video_elements ();
 
 #endif /* UTIL_H_ */

@@ -30,7 +30,7 @@ int main (int argc, char *argv[])
     return -1;
   }
 
-  if (mb_init() != 0)
+  if (mb_init () != 0)
    	return -1;
 
   n = argc - 1;
@@ -52,11 +52,10 @@ int main (int argc, char *argv[])
   	}
   }
 
-  sleep (2);
+//  sleep (2);
 //  mb_media_set_size_property(medias[0], "width", 100);
-  mb_media_set_size_property(medias[0], "height", 300);
-
-
+//  sleep (2);
+//  mb_media_set_size_property(medias[0], "height", 300);
 
   bus = mb_get_message_bus();
 
@@ -99,88 +98,121 @@ int main (int argc, char *argv[])
 }
 
 
-//#include <stdlib.h>
-//#include <stdio.h>
+
 //#include <gst/gst.h>
 //
-//#define MAX_ROUND 100
+//static GMainLoop *loop;
 //
-//int
-//main (int argc, char **argv)
+//static void
+//cb_need_data (GstElement *appsrc,
+//	      guint       unused_size,
+//	      gpointer    user_data)
 //{
-//  GstElement *pipe, *filter;
-//  GstCaps *caps;
-//  gint width, height;
-//  gint xdir, ydir;
-//  gint round;
-//  GstMessage *message;
-//  gchar buff[100];
+//  static gboolean white = FALSE;
+//  static GstClockTime timestamp = 0;
+//  GstBuffer *buffer;
+//  guint size;
+//  GstFlowReturn ret;
 //
-//  gst_init (&argc, &argv);
+//  g_print ("cb_need_data\n");
 //
-//  sprintf(buff, "uridecodebin uri=%s ! capsfilter name=filter ! "
-//             "autovideosink", argv[1]);
+//  size = 385 * 288 * 2;
 //
-//  printf ("%s\n", buff);
+//  buffer = gst_buffer_new_allocate (NULL, size, NULL);
 //
-//  pipe = gst_parse_launch_full (buff, NULL, GST_PARSE_FLAG_NONE, NULL);
-//  g_assert (pipe != NULL);
+//  /* this makes the image black/white */
+//  gst_buffer_memset (buffer, 0, white ? 0xff : 0x0, size);
 //
-//  filter = gst_bin_get_by_name (GST_BIN (pipe), "filter");
-//  g_assert (filter);
+//  white = !white;
 //
-//  width = 320;
-//  height = 240;
-//  xdir = ydir = -10;
+//  GST_BUFFER_PTS (buffer) = timestamp;
+//  GST_BUFFER_DURATION (buffer) = gst_util_uint64_scale_int (1, GST_SECOND, 2);
 //
-//  gst_element_set_state (pipe, GST_STATE_PLAYING);
+//  timestamp += GST_BUFFER_DURATION (buffer);
 //
-//  sleep (4);
+//  g_signal_emit_by_name (appsrc, "push-buffer", buffer, &ret);
 //
-//  for (round = 0; round < MAX_ROUND; round++) {
-//    gchar *capsstr;
-//    g_print ("resize to %dx%d (%d/%d)   \r", width, height, round, MAX_ROUND);
-//
-//    /* we prefer our fixed width and height but allow other dimensions to pass
-//     * as well */
-//    capsstr = g_strdup_printf ("video/x-raw, width=(int)%d, height=(int)%d",
-//        width, height);
-//
-//    caps = gst_caps_from_string (capsstr);
-//    g_free (capsstr);
-//    g_object_set (filter, "caps", caps, NULL);
-//    gst_caps_unref (caps);
-//
-//    width += xdir;
-//    if (width >= 320)
-//      xdir = -10;
-//    else if (width < 200)
-//      xdir = 10;
-//
-//    height += ydir;
-//    if (height >= 240)
-//      ydir = -10;
-//    else if (height < 150)
-//      ydir = 10;
-//
-//    message =
-//        gst_bus_poll (GST_ELEMENT_BUS (pipe), GST_MESSAGE_ERROR,
-//        50 * GST_MSECOND);
-//    if (message) {
-//      g_print ("got error           \n");
-//
-//      gst_message_unref (message);
-//    }
+//  if (ret != GST_FLOW_OK) {
+//    /* something wrong, stop pushing */
+//    g_main_loop_quit (loop);
 //  }
+//}
 //
-//  gst_bus_timed_pop_filtered (gst_element_get_bus(pipe), GST_CLOCK_TIME_NONE,
-//        GST_MESSAGE_EOS | GST_MESSAGE_ERROR);
+//gint
+//main (gint   argc,
+//      gchar *argv[])
+//{
+//  GstElement *pipeline, *appsrc, *conv, *videosink;
+//  GstBus *bus;
+//  GstMessage *msg;
 //
-//  g_print ("done                    \n");
+//  /* init GStreamer */
+//  gst_init (&argc, &argv);
+//  loop = g_main_loop_new (NULL, FALSE);
 //
-//  gst_object_unref (filter);
-//  gst_element_set_state (pipe, GST_STATE_NULL);
-//  gst_object_unref (pipe);
+//  /* setup pipeline */
+//  pipeline = gst_pipeline_new ("pipeline");
+//  appsrc = gst_element_factory_make ("appsrc", "source");
+//  conv = gst_element_factory_make ("videoconvert", "conv");
+//  videosink = gst_element_factory_make ("xvimagesink", "videosink");
+//
+//  /* setup */
+//  g_object_set (G_OBJECT (appsrc), "caps",
+//  		gst_caps_new_simple ("video/x-raw",
+//				     "format", G_TYPE_STRING, "RGB16",
+//				     "width", G_TYPE_INT, 384,
+//				     "height", G_TYPE_INT, 288,
+//				     "framerate", GST_TYPE_FRACTION, 0, 1,
+//				     NULL), NULL);
+//  gst_bin_add_many (GST_BIN (pipeline), appsrc, conv, videosink, NULL);
+//  gst_element_link_many (appsrc, conv, videosink, NULL);
+//
+//  /* setup appsrc */
+//  g_object_set (G_OBJECT (appsrc),
+//		"stream-type", 0,
+//		"format", GST_FORMAT_TIME, NULL);
+//  g_signal_connect (appsrc, "need-data", G_CALLBACK (cb_need_data), NULL);
+//
+//  /* play */
+//  gst_element_set_state (pipeline, GST_STATE_PLAYING);
+////  g_main_loop_run (loop);
+//  bus = gst_element_get_bus (pipeline);
+//
+//	msg = gst_bus_timed_pop_filtered (bus, GST_CLOCK_TIME_NONE,
+//																		GST_MESSAGE_EOS | GST_MESSAGE_ERROR);
+//
+//	if (msg != NULL)
+//	{
+//		GError *err;
+//		gchar *debug_info;
+//
+//		switch (GST_MESSAGE_TYPE(msg))
+//		{
+//			case GST_MESSAGE_ERROR:
+//				gst_message_parse_error (msg, &err, &debug_info);
+//				g_printerr ("Error received from element %s: %s.\n",
+//										GST_OBJECT_NAME(msg->src), err->message);
+//				g_printerr ("Debugging information: %s\n",
+//										debug_info ? debug_info : "none");
+//				g_clear_error (&err);
+//				break;
+//			case GST_MESSAGE_EOS:
+//				g_print ("End-Of-Stream reached.\n");
+//				break;
+//			default:
+//				g_printerr ("Unexpected message received.\n");
+//				break;
+//		}
+//
+//		gst_message_unref (msg);
+//	}
+//
+//  /* clean up */
+//  gst_element_set_state (pipeline, GST_STATE_NULL);
+//
+//  gst_object_unref (GST_OBJECT (pipeline));
+////  g_main_loop_unref (loop);
 //
 //  return 0;
-//}
+//  }
+//
