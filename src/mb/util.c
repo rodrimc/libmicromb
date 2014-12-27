@@ -70,6 +70,8 @@ set_background ()
 		gst_object_unref (bg_filter_src_pad);
 		gst_object_unref (mixer_sink_pad);
 	}
+
+	gst_caps_unref(caps);
 }
 
 int
@@ -194,7 +196,6 @@ set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 	GstPad *sink_pad = NULL, *ghost_pad = NULL, *output_sink_pad = NULL;
 	GstPadLinkReturn ret;
 	int return_code = SUCCESS;
-	int width = 1920, height = 1080;
 
 	video_scaler = gst_element_factory_make ("videoscale", NULL);
 	caps_filter = gst_element_factory_make ("capsfilter", NULL);
@@ -207,8 +208,8 @@ set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 
 	caps = gst_caps_new_simple ("video/x-raw",
 															"pixel-aspect-ratio", GST_TYPE_FRACTION, 1, 1,
-															"width", G_TYPE_INT, width,
-															"height", G_TYPE_INT, height,
+															"width", G_TYPE_INT, media->width,
+															"height", G_TYPE_INT, media->height,
 															NULL);
 
 	g_object_set (G_OBJECT (video_scaler), "add-borders", 0, NULL);
@@ -256,14 +257,11 @@ set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 	}
 	else
 	{
-		gint x_pos, y_pos;
-		g_object_get (output_sink_pad, "ypos", &y_pos, NULL);
-		g_object_get (output_sink_pad, "xpos", &x_pos, NULL);
+		g_object_set (output_sink_pad, "xpos", media->x_pos, NULL);
+		g_object_set (output_sink_pad, "ypos", media->y_pos, NULL);
+		g_object_set (output_sink_pad, "zorder", media->z_index, NULL);
+		g_object_set (output_sink_pad, "alpha", media->alpha, NULL);
 
-		media->x_pos = x_pos;
-		media->y_pos = y_pos;
-
-		g_print (" pos (%d,%d)\n", x_pos, y_pos);
 		g_print (" Link succeeded between %s and videomixer.\n", media->name);
 	}
 
@@ -340,4 +338,3 @@ set_audio_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 	gst_object_unref (sink_pad);
 	return SUCCESS;
 }
-

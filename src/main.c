@@ -21,6 +21,7 @@ int main (int argc, char *argv[])
   GstMessage *msg;
   GstStateChangeReturn ret;
   MbMedia **medias;
+  int width, height, x;
 
   int i, n;
   if (argc < 2)
@@ -33,6 +34,11 @@ int main (int argc, char *argv[])
   if (mb_init () != 0)
    	return -1;
 
+  width = mb_get_window_width ();
+  height = mb_get_window_height ();
+
+  printf ("%dx%d\n", width, height);
+
   n = argc - 1;
 
   medias = (MbMedia **) malloc (sizeof (MbMedia*) * n);
@@ -41,7 +47,9 @@ int main (int argc, char *argv[])
   	gchar alias_buff [8];
   	sprintf (alias_buff, "media_%d", i);
 
-  	medias[i-1] = mb_media_new (argv[i], alias_buff);
+  	medias[i-1] = mb_media_new (alias_buff, argv[i],
+																width / 2 - 640 / 2, height / 2 - 480 / 2, 0,
+																640, 480);
   }
 
   for (i = 0; i < n; i++)
@@ -52,10 +60,27 @@ int main (int argc, char *argv[])
   	}
   }
 
-//  sleep (2);
-//  mb_media_set_size_property(medias[0], "width", 100);
-//  sleep (2);
-//  mb_media_set_size_property(medias[0], "height", 300);
+  sleep (2);
+
+  mb_media_set_z(medias[0], 0);
+  mb_media_set_alpha(medias[0], 0.9);
+
+  mb_media_set_z(medias[1], 1);
+  mb_media_set_alpha(medias[1], 0.5);
+
+  mb_media_set_z(medias[2], 2);
+  mb_media_set_alpha(medias[2], 0.3);
+
+  for (x = 0; x + 640 < width; x += 150)
+  {
+  	sleep (1);
+  	mb_media_set_pos(medias[0], x, 0);
+  	mb_media_set_pos(medias[2], x, height - 480);
+  }
+
+  mb_media_set_size_property(medias[0], "width", 100);
+  mb_media_set_size_property(medias[1], "width", 200);
+  mb_media_set_size_property(medias[2], "height", 100);
 
   bus = mb_get_message_bus();
 

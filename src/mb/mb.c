@@ -29,21 +29,22 @@ mb_init_args (int width, int height)
 }
 
 MbMedia *
-mb_media_new (const gchar *uri, const gchar *media_alias)
+mb_media_new (const char *media_name, const char *uri,
+							int x, int y, int z, int width, int height)
 {
 	GstElement *media_bin = NULL, *uri_decoder = NULL;
 	size_t m_lenght;
 	MbMedia *media;
 
-	media_bin = gst_bin_new (media_alias);
+	media_bin = gst_bin_new (media_name);
 	uri_decoder = gst_element_factory_make ("uridecodebin", NULL);
 
-	m_lenght = strlen(media_alias);
+	m_lenght = strlen(media_name);
 
 
 	media = (MbMedia *) malloc (sizeof (MbMedia));
 	media->name = (char *) malloc ((m_lenght + 1)  * sizeof (char));
-	strcpy(media->name, media_alias);
+	strcpy(media->name, media_name);
 
 	media->decoder = GST_ELEMENT_NAME(uri_decoder);
 
@@ -52,6 +53,14 @@ mb_media_new (const gchar *uri, const gchar *media_alias)
 	media->audio_converter = NULL;
 	media->video_pad_name = NULL;
 	media->audio_pad_name = NULL;
+
+	//properties
+	media->x_pos = x;
+	media->y_pos = y;
+	media->width = width;
+	media->height = height;
+	media->z_index = z;
+	media->alpha = 1;
 
 	g_object_set (uri_decoder, "uri", uri, NULL);
 	g_signal_connect (uri_decoder, "pad-added", G_CALLBACK (pad_added_handler),
@@ -131,9 +140,160 @@ mb_media_set_size_property (MbMedia *media, const char *property, int value)
 	g_value_unset (&g_value);
 	gst_caps_unref(current_caps);
 	gst_caps_unref(new_caps);
+	gst_object_unref(filter_sink_pad);
 	gst_object_unref(video_filter);
 
 	return SUCCESS;
+}
+
+int
+mb_media_set_pos (MbMedia *media, int x, int y)
+{
+	GstElement *element;
+	int return_code = SUCCESS;
+
+	g_assert (media != NULL);
+
+	element = gst_bin_get_by_name (GST_BIN(_global.pipeline), media->name);
+	g_assert (element);
+
+	if (media->video_pad_name == NULL)
+	{
+		return_code = FAILURE;
+		g_printerr ("This media has no video output");
+	}
+	else
+	{
+		GstPad *video_mixer_pad = NULL;
+		int x_pos, y_pos;
+
+		video_mixer_pad =
+				gst_element_get_static_pad (_global.video_mixer, media->video_pad_name);
+		g_assert(video_mixer_pad);
+
+		g_object_set (video_mixer_pad, "xpos", x, NULL);
+		g_object_set (video_mixer_pad, "ypos", y, NULL);
+
+		//Properties have really changed?
+		g_object_get (video_mixer_pad, "xpos", &x_pos, NULL);
+		g_object_get (video_mixer_pad, "ypos", &y_pos, NULL);
+
+		if (x_pos == x && y_pos == y)
+		{
+			media->x_pos = x;
+			media->y_pos = y;
+		}
+		else
+			return_code = FAILURE;
+
+		gst_object_unref(video_mixer_pad);
+	}
+
+	gst_object_unref (element);
+
+	return return_code;
+}
+
+int
+mb_media_set_z (MbMedia *media, int z)
+{
+	GstElement *element;
+	int return_code = SUCCESS;
+
+	g_assert (media != NULL);
+
+	element = gst_bin_get_by_name (GST_BIN(_global.pipeline), media->name);
+	g_assert (element);
+
+	if (media->video_pad_name == NULL)
+	{
+		return_code = FAILURE;
+		g_printerr ("This media has no visual output\n");
+	}
+	else
+	{
+		GstPad *video_mixer_pad = NULL;
+		int zorder;
+
+		video_mixer_pad =
+				gst_element_get_static_pad (_global.video_mixer, media->video_pad_name);
+		g_assert(video_mixer_pad);
+
+		g_object_set (video_mixer_pad, "zorder", z, NULL);
+
+		//Property has really changed?
+		g_object_get (video_mixer_pad, "zorder", &zorder, NULL);
+
+		if (zorder == z)
+		{
+			media->z_index = z;
+		}
+		else
+			return_code = FAILURE;
+
+		gst_object_unref(video_mixer_pad);
+	}
+
+	gst_object_unref (element);
+
+	return return_code;
+}
+
+int
+mb_media_set_alpha (MbMedia *media, double alpha)
+{
+	GstElement *element;
+	int return_code = SUCCESS;
+
+	g_assert (media != NULL);
+
+	element = gst_bin_get_by_name (GST_BIN(_global.pipeline), media->name);
+	g_assert (element);
+
+	if (media->video_pad_name == NULL)
+	{
+		return_code = FAILURE;
+		g_printerr ("This media has no visual output\n");
+	}
+	else
+	{
+		GstPad *video_mixer_pad = NULL;
+		double alpha_channel;
+
+		video_mixer_pad =
+				gst_element_get_static_pad (_global.video_mixer, media->video_pad_name);
+		g_assert(video_mixer_pad);
+
+		g_object_set (video_mixer_pad, "alpha", alpha, NULL);
+
+		//Property has really changed?
+		g_object_get (video_mixer_pad, "alpha", &alpha_channel, NULL);
+
+		if (alpha_channel == alpha)
+		{
+			media->alpha = alpha;
+		}
+		else
+			return_code = FAILURE;
+
+		gst_object_unref(video_mixer_pad);
+	}
+
+	gst_object_unref (element);
+
+	return return_code;
+}
+
+int
+mb_get_window_height ()
+{
+	return _global.window_height;
+}
+
+int
+mb_get_window_width ()
+{
+	return _global.window_width;
 }
 
 void
