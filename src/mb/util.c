@@ -8,11 +8,14 @@
 
 #include "util.h"
 
+static char* audio_caps = "audio/x-raw,rate=48000";
+
 static void
 set_background ()
 {
 	GstElement *bg_src = NULL, *bg_scaler = NULL, *bg_filter = NULL,
-			*bg_capsfilter = NULL;
+			*bg_capsfilter = NULL, *audio_src = NULL, *audio_conv = NULL,
+			*audio_resample = NULL, *audio_capsfilter = NULL;
 	GstCaps *caps;
 
 	//black background
@@ -25,53 +28,110 @@ set_background ()
 	bg_capsfilter = gst_element_factory_make ("capsfilter", NULL);
 	g_assert (bg_capsfilter);
 
-	g_object_set (G_OBJECT (bg_src), "pattern", 2, NULL);
+	g_object_set (G_OBJECT (bg_src), "pattern", /*black*/ 2, NULL);
 
 	caps = gst_caps_new_simple (
-			"video/x-raw",
-			"framerate", GST_TYPE_FRACTION, 25, 1,
-			"pixel-aspect-ratio", GST_TYPE_FRACTION, 1, 1,
-			"width", G_TYPE_INT, _global.window_width,
-			"height", G_TYPE_INT, _global.window_height,
-			NULL);
+													"video/x-raw",
+													"framerate", GST_TYPE_FRACTION, 25, 1,
+													"pixel-aspect-ratio", GST_TYPE_FRACTION, 1, 1,
+													"width", G_TYPE_INT, _global.window_width,
+													"height", G_TYPE_INT, _global.window_height,
+													NULL);
 	g_assert (caps);
 
 	g_object_set (G_OBJECT (bg_scaler), "add-borders", 0, NULL);
-  g_object_set (G_OBJECT(bg_capsfilter), "caps", caps, NULL);
+	g_object_set (G_OBJECT(bg_capsfilter), "caps", caps, NULL);
+
+	gst_caps_unref(caps);
+
+	//silence audio
+	audio_src = gst_element_factory_make ("audiotestsrc", NULL);
+	g_assert (audio_src);
+
+	audio_conv = gst_element_factory_make ("audioconvert", NULL);
+	g_assert (audio_src);
+
+	audio_resample = gst_element_factory_make ("audioresample", NULL);
+	g_assert (audio_resample);
+
+	audio_capsfilter = gst_element_factory_make ("capsfilter", NULL);
+	g_assert (audio_capsfilter);
+
+	g_object_set (G_OBJECT (audio_src), "wave", /*silence*/ 4, NULL);
+
+  caps = gst_caps_from_string
+        (audio_caps);
+  g_assert (caps);
+  g_object_set (audio_capsfilter, "caps", caps, NULL);
+
+	gst_caps_unref(caps);
 
 	gst_bin_add_many(GST_BIN(_global.pipeline), bg_src, bg_scaler,
-									 bg_capsfilter, NULL);
+									 bg_capsfilter, audio_src, audio_conv, audio_resample,
+									 audio_capsfilter, NULL);
 
-	if (!gst_element_link_many(bg_src, bg_scaler, bg_capsfilter, NULL))
+	if (!gst_element_link_many(bg_src, bg_scaler, bg_capsfilter, NULL) ||
+			!gst_element_link_many (audio_src, audio_conv, audio_resample,
+															audio_capsfilter, NULL))
 	{
 		g_printerr ("Could not link background elements together.\n");
 		mb_clean_up ();
 	}
 	else
 	{
-		GstPad *bg_filter_src_pad = NULL, *mixer_sink_pad = NULL;
+		GstPad *src_pad = NULL, *mixer_sink_pad = NULL;
 		GstPadLinkReturn ret;
+		GstCaps *audio_caps = NULL;
+		GstStructure *audio_caps_structure = NULL;
+		const gchar *name = NULL;
+		int rate;
 
-		bg_filter_src_pad = gst_element_get_static_pad(bg_capsfilter, "src");
-		g_assert (bg_filter_src_pad);
+		//video
+		src_pad = gst_element_get_static_pad(bg_capsfilter, "src");
+		g_assert (src_pad);
 
 		mixer_sink_pad = gst_element_get_request_pad(_global.video_mixer,
 																								 "sink_%u");
 		g_assert (mixer_sink_pad);
 
-		ret = gst_pad_link (bg_filter_src_pad, mixer_sink_pad);
+		ret = gst_pad_link (src_pad, mixer_sink_pad);
 		if (GST_PAD_LINK_FAILED(ret))
-			g_print (" Background link failed.\n");
+			g_print (" Background video link failed.\n");
 		else
 		{
-			g_print (" Background link succeeded.\n");
+			g_print (" Background video link succeeded.\n");
 		}
 
-		gst_object_unref (bg_filter_src_pad);
+		gst_object_unref (src_pad);
+		gst_object_unref (mixer_sink_pad);
+
+		//audio
+		src_pad = gst_element_get_static_pad(audio_capsfilter, "src");
+		g_assert (src_pad);
+
+		mixer_sink_pad = gst_element_get_request_pad(_global.audio_mixer,
+																								 "sink_%u");
+		g_assert (mixer_sink_pad);
+
+		ret = gst_pad_link (src_pad, mixer_sink_pad);
+		if (GST_PAD_LINK_FAILED(ret))
+			g_print (" Background audio link failed.\n");
+		else
+		{
+			g_print (" Background audio link succeeded.\n");
+		}
+
+		audio_caps = gst_pad_query_caps (src_pad, NULL);
+		audio_caps_structure = gst_caps_get_structure (audio_caps, 0);
+		name = gst_structure_get_name (audio_caps_structure);
+		if (gst_structure_has_field(audio_caps_structure, "rate"))
+		{
+			gst_structure_get_int(audio_caps_structure, "rate", &rate);
+		}
+
+		gst_object_unref (src_pad);
 		gst_object_unref (mixer_sink_pad);
 	}
-
-	gst_caps_unref(caps);
 }
 
 int
@@ -95,20 +155,36 @@ init (int width, int height)
 	_global.audio_sink  		= NULL;
 	_global.window_width 		= width;
 	_global.window_height 	= height;
-	_global.a_init  				= 0;
 
+	//video
 	_global.video_mixer = gst_element_factory_make("videomixer", NULL);
 	g_assert(_global.video_mixer);
 
 	_global.video_sink = gst_element_factory_make("xvimagesink", NULL);
 	g_assert (_global.video_sink);
 
-	gst_bin_add_many(GST_BIN (_global.pipeline), _global.video_mixer,
-									 _global.video_sink, NULL);
+	//audio
+	_global.audio_mixer = gst_element_factory_make("adder", NULL);
+	g_assert(_global.audio_mixer);
+
+	_global.audio_sink = gst_element_factory_make("autoaudiosink", NULL);
+	g_assert (_global.audio_sink);
+
+	gst_bin_add_many(GST_BIN (_global.pipeline),
+									 _global.video_mixer, _global.video_sink,
+									 _global.audio_mixer, _global.audio_sink,
+									 NULL);
 
 	if (!gst_element_link(_global.video_mixer, _global.video_sink))
 	{
 		g_printerr ("Could not link video mixer and sink together.\n");
+		mb_clean_up ();
+		return FAILURE;
+	}
+
+	if (!gst_element_link(_global.audio_mixer, _global.audio_sink))
+	{
+		g_printerr ("Could not link audio mixer and sink together.\n");
 		mb_clean_up ();
 		return FAILURE;
 	}
@@ -164,6 +240,11 @@ pad_added_handler (GstElement *src, GstPad *new_pad, MbMedia *media)
 	}
 	else if (g_strcmp0(new_pad_type, "audio/x-raw") == 0)
 	{
+		int rate;
+		if (gst_structure_has_field(new_pad_struct, "rate"))
+		{
+			gst_structure_get_int(new_pad_struct, "rate", &rate);
+		}
 		set_audio_bin (bin, media, new_pad);
 	}
 
@@ -174,51 +255,18 @@ pad_added_handler (GstElement *src, GstPad *new_pad, MbMedia *media)
 }
 
 int
-set_audio_elements ()
-{
-	_global.audio_sink = gst_element_factory_make	("autoaudiosink", "audiosink");
-	_global.audio_mixer = gst_element_factory_make("adder", "audiomixer");
-
-	g_assert (_global.audio_sink);
-	g_assert (_global.audio_mixer);
-
-	gst_element_set_state(_global.audio_mixer, GST_STATE_PAUSED);
-	gst_element_set_state(_global.audio_sink, GST_STATE_PAUSED);
-
-	gst_bin_add_many(GST_BIN (_global.pipeline), _global.audio_mixer,
-									 _global.audio_sink, NULL);
-
-	if (!gst_element_link(_global.audio_mixer, _global.audio_sink))
-	{
-		g_printerr ("Could not link audio mixer and audio_sink together.\n");
-		return FAILURE;
-	}
-
-	gst_element_set_state(_global.audio_mixer, GST_STATE_PLAYING);
-	gst_element_set_state(_global.audio_sink, GST_STATE_PLAYING);
-
-	_global.a_init = 1;
-
-	return 0;
-}
-
-int
 set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 {
-	GstElement *video_scaler = NULL, *caps_filter = NULL;
 	GstCaps *caps = NULL;
 	GstPad *sink_pad = NULL, *ghost_pad = NULL, *output_sink_pad = NULL;
 	GstPadLinkReturn ret;
 	int return_code = SUCCESS;
 
-	video_scaler = gst_element_factory_make ("videoscale", NULL);
-	caps_filter = gst_element_factory_make ("capsfilter", NULL);
+	g_assert (media->video_scaler);
+	g_assert (media->video_filter);
 
-	g_assert (video_scaler);
-	g_assert (caps_filter);
-
-	gst_element_set_state(video_scaler, GST_STATE_PAUSED);
-	gst_element_set_state(caps_filter, GST_STATE_PAUSED);
+	gst_element_set_state(media->video_scaler, GST_STATE_PAUSED);
+	gst_element_set_state(media->video_filter, GST_STATE_PAUSED);
 
 	caps = gst_caps_new_simple ("video/x-raw",
 															"pixel-aspect-ratio", GST_TYPE_FRACTION, 1, 1,
@@ -226,19 +274,20 @@ set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 															"height", G_TYPE_INT, media->height,
 															NULL);
 
-	g_object_set (G_OBJECT (video_scaler), "add-borders", 0, NULL);
-	g_object_set (G_OBJECT (caps_filter), "caps", caps, NULL);
+	g_object_set (G_OBJECT (media->video_scaler), "add-borders", 0, NULL);
+	g_object_set (G_OBJECT (media->video_filter), "caps", caps, NULL);
 
-	gst_bin_add_many(GST_BIN (bin), video_scaler, caps_filter, NULL);
-	if (!gst_element_link (video_scaler, caps_filter))
+	gst_bin_add_many(GST_BIN (bin), media->video_scaler, media->video_filter,
+									 NULL);
+	if (!gst_element_link (media->video_scaler, media->video_filter))
 	{
 		g_printerr ("Could not link elements together");
-		gst_object_unref (video_scaler);
-		gst_object_unref (caps_filter);
+		gst_object_unref (media->video_scaler);
+		gst_object_unref (media->video_filter);
 		return FAILURE;
 	}
 
-	sink_pad = gst_element_get_static_pad (video_scaler, "sink");
+	sink_pad = gst_element_get_static_pad (media->video_scaler, "sink");
 	g_assert(sink_pad);
 	ret = gst_pad_link (decoder_src_pad, sink_pad);
 
@@ -247,11 +296,8 @@ set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 	else
 		g_print (" Link succeeded.\n");
 
-	media->video_scaler = GST_ELEMENT_NAME (video_scaler);
-	media->video_filter= GST_ELEMENT_NAME (caps_filter);
-
 	ghost_pad = gst_ghost_pad_new (
-			"v_src", gst_element_get_static_pad (caps_filter, "src"));
+			"v_src", gst_element_get_static_pad (media->video_filter, "src"));
 
 	gst_pad_set_active (ghost_pad, TRUE);
 	gst_element_add_pad (bin, ghost_pad);
@@ -279,8 +325,8 @@ set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 		g_print (" Link succeeded between %s and videomixer.\n", media->name);
 	}
 
-	gst_element_set_state (video_scaler, GST_STATE_PLAYING);
-	gst_element_set_state (caps_filter, GST_STATE_PLAYING);
+	gst_element_set_state (media->video_scaler, GST_STATE_PLAYING);
+	gst_element_set_state (media->video_filter, GST_STATE_PLAYING);
 
 	gst_caps_unref(caps);
 	gst_object_unref (output_sink_pad);
@@ -292,63 +338,93 @@ set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 int
 set_audio_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 {
-	GstElement *audio_converter = NULL;
 	GstPad *sink_pad = NULL, *ghost_pad = NULL, *output_sink_pad = NULL;
+	GstCaps *caps = NULL;
+	GstPadLinkReturn ret;
+	int return_code = SUCCESS;
 
-	//Create audio sink on demand
+	g_assert(media->audio_volume);
 
-	//The following test is also for optimization purposes
-	//(see the comments on function set_video_bin).
-	if (_global.a_init == 0)
+	media->audio_converter = gst_element_factory_make ("audioconvert", NULL);
+	g_assert (media->audio_converter);
+
+	media->audio_resampler = gst_element_factory_make ("audioresample", NULL);
+	g_assert (media->audio_resampler);
+
+	media->audio_filter = gst_element_factory_make ("capsfilter", NULL);
+	g_assert (media->audio_filter);
+
+	gst_element_set_state (media->audio_volume, GST_STATE_PAUSED);
+	gst_element_set_state (media->audio_converter, GST_STATE_PAUSED);
+	gst_element_set_state (media->audio_resampler, GST_STATE_PAUSED);
+	gst_element_set_state (media->audio_filter, GST_STATE_PAUSED);
+
+	caps = gst_caps_from_string
+		        (audio_caps);
+	g_assert (caps);
+	g_object_set (media->audio_filter, "caps", caps, NULL);
+	gst_caps_unref(caps);
+
+	gst_bin_add_many (GST_BIN(bin), media->audio_volume, media->audio_converter,
+										media->audio_resampler, media->audio_filter, NULL);
+
+	if (!gst_element_link_many (media->audio_volume, media->audio_converter,
+														 media->audio_resampler, media->audio_filter, NULL))
 	{
-//		g_mutex_lock (&_global.a_mutex);
-		if (!_global.audio_sink && set_audio_elements () != 0)
-		{
-			g_printerr ("Unable to set video sink\n");
-//			g_mutex_unlock (&_global.a_mutex);
-			return FAILURE;
-		}
-//		g_mutex_unlock (&_global.a_mutex);
+		g_print ("Could not link audio_converter and audio_volume together\n.");
+		return_code = FAILURE;
 	}
-
-	audio_converter = gst_element_factory_make ("audioconvert", NULL);
-	g_assert (audio_converter);
-
-	gst_element_set_state (audio_converter, GST_STATE_PAUSED);
-
-	gst_bin_add (GST_BIN(bin), audio_converter);
-
-	sink_pad = gst_element_get_static_pad (audio_converter, "sink");
-	if (sink_pad)
+	else
 	{
-		GstPadLinkReturn ret = gst_pad_link (decoder_src_pad, sink_pad);
+//		if (gst_pad_is_linked(
+//				gst_element_get_static_pad(_global.audio_sink, "sink")))
+//		{
+//			gst_bin_add_many (GST_BIN(_global.pipeline), _global.audio_mixer,
+//												_global.audio_sink, NULL);
+//			gst_element_link(_global.audio_mixer, _global.audio_sink);
+//		}
+
+		sink_pad = gst_element_get_static_pad (media->audio_volume, "sink");
+		g_assert (sink_pad);
+
+		ret = gst_pad_link (decoder_src_pad, sink_pad);
 		if (GST_PAD_LINK_FAILED(ret))
 		{
+			return_code = FAILURE;
 			g_print (" Link failed.\n");
 		}
 		else
 		{
 			g_print (" Link succeeded.\n");
+
+			gst_element_set_state (media->audio_volume, GST_STATE_PLAYING);
+			gst_element_set_state (media->audio_converter, GST_STATE_PLAYING);
+			gst_element_set_state (media->audio_resampler, GST_STATE_PLAYING);
+			gst_element_set_state (media->audio_filter, GST_STATE_PLAYING);
+
+			ghost_pad = gst_ghost_pad_new (
+					"a_src", gst_element_get_static_pad (media->audio_filter,
+																							 "src"));
+			gst_pad_set_active (ghost_pad, TRUE);
+			gst_element_add_pad (bin, ghost_pad);
+
+			output_sink_pad = gst_element_get_request_pad (_global.audio_mixer,
+																										 "sink_%u");
+			g_assert(output_sink_pad);
+
+			media->audio_pad_name = gst_pad_get_name(output_sink_pad);
+			g_print ("audiomixer: new pad requested (%s)\n", media->audio_pad_name);
+
+			ret = gst_pad_link (ghost_pad, output_sink_pad);
+			if (GST_PAD_LINK_FAILED(ret))
+			{
+				return_code = FAILURE;
+				g_print (" Could not link %s and audiomixer together.\n", media->name);
+			}
+
+			gst_object_unref (output_sink_pad);
+			gst_object_unref (sink_pad);
 		}
 	}
-
-	media->audio_converter = GST_ELEMENT_NAME(audio_converter);
-
-	gst_element_set_state (audio_converter, GST_STATE_PLAYING);
-
-	ghost_pad = gst_ghost_pad_new (
-			"a_src", gst_element_get_static_pad (audio_converter, "src"));
-
-	gst_pad_set_active (ghost_pad, TRUE);
-	gst_element_add_pad (bin, ghost_pad);
-
-	output_sink_pad = gst_element_get_request_pad (_global.audio_mixer,
-																								"sink_%u");
-
-	if (output_sink_pad)
-		gst_pad_link (ghost_pad, output_sink_pad);
-
-	gst_object_unref (output_sink_pad);
-	gst_object_unref (sink_pad);
-	return SUCCESS;
+	return return_code;
 }

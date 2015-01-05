@@ -32,27 +32,29 @@ MbMedia *
 mb_media_new (const char *media_name, const char *uri,
 							int x, int y, int z, int width, int height)
 {
-	GstElement *media_bin = NULL, *uri_decoder = NULL;
-	size_t m_lenght;
+	GstElement *media_bin = NULL;
+	size_t lenght;
 	MbMedia *media;
 
-	media_bin = gst_bin_new (media_name);
-	uri_decoder = gst_element_factory_make ("uridecodebin", NULL);
-
-	m_lenght = strlen(media_name);
-
-
 	media = (MbMedia *) malloc (sizeof (MbMedia));
-	media->name = (char *) malloc ((m_lenght + 1)  * sizeof (char));
+
+	media_bin = gst_bin_new (media_name);
+	media->decoder = gst_element_factory_make ("uridecodebin", NULL);
+	media->video_scaler = gst_element_factory_make ("videoscale", NULL);
+	media->video_filter = gst_element_factory_make ("capsfilter", NULL);
+	media->audio_volume = gst_element_factory_make ("volume", NULL);
+
+	media->audio_converter = NULL;
+	media->audio_resampler = NULL;
+	media->audio_filter = NULL;
+
+
+	lenght = strlen(media_name);
+	media->name = (char *) malloc ((lenght + 1)  * sizeof (char));
 	strcpy(media->name, media_name);
 
-	media->decoder = GST_ELEMENT_NAME(uri_decoder);
-
-	media->video_filter = NULL;
-	media->video_scaler = NULL;
-	media->audio_converter = NULL;
-	media->video_pad_name = NULL;
-	media->audio_pad_name = NULL;
+	media->video_pad_name  = NULL;
+	media->audio_pad_name  = NULL;
 
 	//properties
 	media->x_pos = x;
@@ -62,11 +64,11 @@ mb_media_new (const char *media_name, const char *uri,
 	media->z_index = z;
 	media->alpha = 1;
 
-	g_object_set (uri_decoder, "uri", uri, NULL);
-	g_signal_connect (uri_decoder, "pad-added", G_CALLBACK (pad_added_handler),
+	g_object_set (media->decoder, "uri", uri, NULL);
+	g_signal_connect (media->decoder, "pad-added", G_CALLBACK (pad_added_handler),
 											media);
 
-	gst_bin_add (GST_BIN(media_bin), uri_decoder);
+	gst_bin_add (GST_BIN(media_bin), media->decoder);
 	gst_bin_add (GST_BIN(_global.pipeline), media_bin);
 
 	return media;
@@ -102,12 +104,10 @@ mb_get_message_bus ()
 }
 
 int
-mb_media_set_size_property (MbMedia *media, const char *property, int value)
+mb_media_set_size (MbMedia *media, int width, int height)
 {
-	GstElement *video_filter = NULL;
-	GstCaps *current_caps = NULL, *new_caps = NULL;
+	GstCaps *new_caps = NULL;
 	GstPad *filter_sink_pad = NULL;
-	GValue g_value = G_VALUE_INIT;
 
 	g_assert (media != NULL);
 
@@ -117,31 +117,21 @@ mb_media_set_size_property (MbMedia *media, const char *property, int value)
 		return FAILURE;
 	}
 
-	g_value_init (&g_value, G_TYPE_INT);
-	g_value_set_int (&g_value, value);
-
-	video_filter = gst_bin_get_by_name (GST_BIN (_global.pipeline),
-																media->video_filter);
-	g_assert (video_filter);
-
-	filter_sink_pad = gst_element_get_static_pad(video_filter, "sink");
+	filter_sink_pad = gst_element_get_static_pad(media->video_filter, "sink");
 	g_assert (filter_sink_pad);
 
-	current_caps = gst_pad_get_current_caps(filter_sink_pad);
-	g_assert (current_caps);
-
-	new_caps = gst_caps_copy(current_caps);
+	new_caps = gst_caps_new_simple ("video/x-raw", "pixel-aspect-ratio",
+																	GST_TYPE_FRACTION, 1, 1,
+																	"width", G_TYPE_INT, width,
+																	"height", G_TYPE_INT, height,
+																	NULL);
 	g_assert(new_caps);
-	gst_caps_set_value(new_caps, property, &g_value);
 
-	g_object_set (G_OBJECT(video_filter), "caps", new_caps, NULL);
+	g_object_set (G_OBJECT(media->video_filter), "caps", new_caps, NULL);
 
 	//Cleaning up
-	g_value_unset (&g_value);
-	gst_caps_unref(current_caps);
 	gst_caps_unref(new_caps);
 	gst_object_unref(filter_sink_pad);
-	gst_object_unref(video_filter);
 
 	return SUCCESS;
 }
@@ -160,7 +150,7 @@ mb_media_set_pos (MbMedia *media, int x, int y)
 	if (media->video_pad_name == NULL)
 	{
 		return_code = FAILURE;
-		g_printerr ("This media has no video output");
+		g_printerr ("This media has no video output.\n");
 	}
 	else
 	{

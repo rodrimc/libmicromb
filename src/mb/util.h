@@ -25,10 +25,6 @@ typedef struct
 	GstElement *video_sink;
 	GstElement *audio_sink;
 
-	int a_init;
-
-	GMutex a_mutex;
-
 	int window_height;
 	int window_width;
 } MbData;
@@ -41,7 +37,5 @@ pad_added_handler (GstElement *src, GstPad *new_pad, MbMedia *media);
 int
 init (int width, int height);
 
-int
-set_audio_elements ();
 
 #endif /* UTIL_H_ */

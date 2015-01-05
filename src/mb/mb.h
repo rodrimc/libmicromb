@@ -17,14 +17,17 @@
 typedef struct
 {
 	gchar *name;
-	gchar *decoder;
+	GstElement *decoder;
 
 	//video
-	gchar *video_scaler;
-	gchar *video_filter;
+	GstElement *video_scaler;
+	GstElement *video_filter;
 
 	//audio
-	gchar *audio_converter;
+	GstElement *audio_volume;
+	GstElement *audio_converter;
+	GstElement *audio_resampler;
+	GstElement *audio_filter;
 
 	//pads
 	gchar *video_pad_name;
@@ -82,14 +85,14 @@ mb_media_free (MbMedia *media);
 
 /**
  * \brief Change the value of a size property
- * 	@param media Media pointer to change the property value
- * 	@param property Property name. Allowed values: width, height
- * 	@param value The new value
+ * 	@param media Media pointer
+ * 	@param width Width value to set
+ * 	@param height Height value to set
  *
  *	@return SUCESS if the property was properly set or FAILURE otherwise.
  */
 int
-mb_media_set_size_property (MbMedia *media, const char *property, int value);
+mb_media_set_size (MbMedia *media, int width, int height);
 
 /**
  * \brief Set the media position
