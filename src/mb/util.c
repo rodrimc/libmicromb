@@ -78,6 +78,8 @@ int
 init (int width, int height)
 {
 	GstStateChangeReturn ret;
+	GstState current_state;
+
 	if (!gst_init_check(NULL, NULL, NULL))
 	{
 		g_printerr ("Failed to initialize gstreamer...\n");
@@ -114,6 +116,18 @@ init (int width, int height)
 	set_background();
 
 	ret = gst_element_set_state (_global.pipeline, GST_STATE_PLAYING);
+	if (ret == GST_STATE_CHANGE_FAILURE)
+	{
+		mb_clean_up ();
+		return FAILURE;
+	}
+
+	//The following call is necessary because the 'gst_element_set_state'
+	//can return GST_STATE_CHANGE_ASYNC. In this case, the function
+	//'gst_element_get_state' blocks until the state has effectively changed.
+	ret = gst_element_get_state (_global.pipeline, &current_state, NULL,
+															 GST_CLOCK_TIME_NONE);
+
 	if (ret == GST_STATE_CHANGE_FAILURE)
 	{
 		mb_clean_up ();
