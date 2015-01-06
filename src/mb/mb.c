@@ -38,6 +38,8 @@ mb_media_new (const char *media_name, const char *uri,
 
 	media = (MbMedia *) malloc (sizeof (MbMedia));
 
+	g_mutex_init (&(media->mutex));
+
 	media_bin = gst_bin_new (media_name);
 	media->decoder = gst_element_factory_make ("uridecodebin", NULL);
 	media->video_scaler = gst_element_factory_make ("videoscale", NULL);
@@ -113,6 +115,8 @@ mb_media_set_size (MbMedia *media, int width, int height)
 
 	g_assert (media != NULL);
 
+	g_mutex_lock(&(media->mutex));
+
 	if (!media->video_filter)
 	{
 		g_printerr ("Video stream not found\n");
@@ -133,6 +137,8 @@ mb_media_set_size (MbMedia *media, int width, int height)
 	media->width = width;
 	media->height = height;
 
+	g_mutex_unlock(&(media->mutex));
+
 	//Cleaning up
 	gst_caps_unref(new_caps);
 	gst_object_unref(filter_sink_pad);
@@ -151,10 +157,15 @@ mb_media_set_pos (MbMedia *media, int x, int y)
 	element = gst_bin_get_by_name (GST_BIN(_global.pipeline), media->name);
 	g_assert (element);
 
+	g_mutex_lock(&(media->mutex));
+
 	if (media->video_pad_name == NULL)
 	{
 		return_code = FALSE;
-		g_printerr ("This media has no video output.\n");
+		media->x_pos = x;
+		media->y_pos = y;
+
+		g_printerr ("This media has no video output yet.\n");
 	}
 	else
 	{
@@ -183,6 +194,8 @@ mb_media_set_pos (MbMedia *media, int x, int y)
 		gst_object_unref(video_mixer_pad);
 	}
 
+	g_mutex_unlock(&(media->mutex));
+
 	gst_object_unref (element);
 
 	return return_code;
@@ -199,10 +212,14 @@ mb_media_set_z (MbMedia *media, int z)
 	element = gst_bin_get_by_name (GST_BIN(_global.pipeline), media->name);
 	g_assert (element);
 
+	g_mutex_lock(&(media->mutex));
+
 	if (media->video_pad_name == NULL)
 	{
 		return_code = FALSE;
-		g_printerr ("This media has no visual output\n");
+		media->z_index = z;
+
+		g_printerr ("This media has no visual output yet\n");
 	}
 	else
 	{
@@ -228,6 +245,8 @@ mb_media_set_z (MbMedia *media, int z)
 		gst_object_unref(video_mixer_pad);
 	}
 
+	g_mutex_unlock(&(media->mutex));
+
 	gst_object_unref (element);
 
 	return return_code;
@@ -244,9 +263,13 @@ mb_media_set_alpha (MbMedia *media, double alpha)
 	element = gst_bin_get_by_name (GST_BIN(_global.pipeline), media->name);
 	g_assert (element);
 
+	g_mutex_lock(&(media->mutex));
+
 	if (media->video_pad_name == NULL)
 	{
 		return_code = FALSE;
+		media->alpha = alpha;
+
 		g_printerr ("This media has no visual output\n");
 	}
 	else
@@ -272,6 +295,7 @@ mb_media_set_alpha (MbMedia *media, double alpha)
 
 		gst_object_unref(video_mixer_pad);
 	}
+	g_mutex_unlock(&(media->mutex));
 
 	gst_object_unref (element);
 

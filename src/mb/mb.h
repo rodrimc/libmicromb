@@ -41,6 +41,8 @@ typedef struct
 	gint height;
 	gdouble alpha;
 
+	//lock
+	GMutex mutex;
 } MbMedia; /*!< Representation of media objects to clients of this library*/
 
 /**

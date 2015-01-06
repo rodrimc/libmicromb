@@ -252,6 +252,8 @@ pad_added_handler (GstElement *src, GstPad *new_pad, MbMedia *media)
 	bin = gst_bin_get_by_name(GST_BIN(_global.pipeline), media->name);
 	g_assert (bin);
 
+	g_mutex_lock(&(media->mutex));
+
 	if (g_str_has_prefix(new_pad_type, "video"))
 	{
 		set_video_bin (bin, media, new_pad);
@@ -260,6 +262,7 @@ pad_added_handler (GstElement *src, GstPad *new_pad, MbMedia *media)
 	{
 		set_audio_bin (bin, media, new_pad);
 	}
+	g_mutex_unlock(&(media->mutex));
 
 	gst_object_unref(bin);
 
