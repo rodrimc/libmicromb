@@ -9,6 +9,23 @@
 #include "util.h"
 
 static char* audio_caps = "audio/x-raw,rate=48000";
+static char *image_exts [] = { ".jpg", ".jpeg", ".png", ".gif", ".bmp", NULL };
+
+gboolean
+has_image_extension (const char *uri)
+{
+	int i;
+	if (uri == NULL)
+		return FALSE;
+
+	for (i = 0; image_exts[i] != NULL; i++)
+	{
+		if (g_str_has_suffix(uri, image_exts[i]))
+			return TRUE;
+	}
+
+	return FALSE;
+}
 
 static void
 set_background ()
@@ -143,7 +160,7 @@ init (int width, int height)
 	if (!gst_init_check(NULL, NULL, NULL))
 	{
 		g_printerr ("Failed to initialize gstreamer...\n");
-		return FAILURE;
+		return FALSE;
 	}
 
 	_global.pipeline = gst_pipeline_new ("pipeline");
@@ -179,14 +196,14 @@ init (int width, int height)
 	{
 		g_printerr ("Could not link video mixer and sink together.\n");
 		mb_clean_up ();
-		return FAILURE;
+		return FALSE;
 	}
 
 	if (!gst_element_link(_global.audio_mixer, _global.audio_sink))
 	{
 		g_printerr ("Could not link audio mixer and sink together.\n");
 		mb_clean_up ();
-		return FAILURE;
+		return FALSE;
 	}
 
 	set_background();
@@ -195,7 +212,7 @@ init (int width, int height)
 	if (ret == GST_STATE_CHANGE_FAILURE)
 	{
 		mb_clean_up ();
-		return FAILURE;
+		return FALSE;
 	}
 
 	//The following call is necessary because the 'gst_element_set_state'
@@ -207,10 +224,10 @@ init (int width, int height)
 	if (ret == GST_STATE_CHANGE_FAILURE)
 	{
 		mb_clean_up ();
-		return FAILURE;
+		return FALSE;
 	}
 
-	return SUCCESS;
+	return TRUE;
 }
 
 void
@@ -220,7 +237,9 @@ pad_added_handler (GstElement *src, GstPad *new_pad, MbMedia *media)
 	GstCaps *new_pad_caps = NULL;
 	GstStructure *new_pad_struct = NULL;
 	GstElement *bin = NULL;
-	const char *new_pad_type = NULL;
+	const gchar *new_pad_type = NULL;
+
+	g_assert (media);
 
 	g_print ("Received new pad '%s' from '%s'\n", GST_PAD_NAME(new_pad),
 					 media->name);
@@ -230,21 +249,15 @@ pad_added_handler (GstElement *src, GstPad *new_pad, MbMedia *media)
 	new_pad_type = gst_structure_get_name (new_pad_struct);
 
 	g_print ("New pad type: %s\n", new_pad_type);
-
 	bin = gst_bin_get_by_name(GST_BIN(_global.pipeline), media->name);
 	g_assert (bin);
 
-	if (g_strcmp0(new_pad_type, "video/x-raw") == 0)
+	if (g_str_has_prefix(new_pad_type, "video"))
 	{
 		set_video_bin (bin, media, new_pad);
 	}
-	else if (g_strcmp0(new_pad_type, "audio/x-raw") == 0)
+	else if (g_str_has_prefix(new_pad_type, "audio"))
 	{
-		int rate;
-		if (gst_structure_has_field(new_pad_struct, "rate"))
-		{
-			gst_structure_get_int(new_pad_struct, "rate", &rate);
-		}
 		set_audio_bin (bin, media, new_pad);
 	}
 
@@ -254,13 +267,16 @@ pad_added_handler (GstElement *src, GstPad *new_pad, MbMedia *media)
 		gst_caps_unref (new_pad_caps);
 }
 
-int
+gboolean
 set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 {
+	GstElement *sink_element = NULL;
 	GstCaps *caps = NULL;
 	GstPad *sink_pad = NULL, *ghost_pad = NULL, *output_sink_pad = NULL;
 	GstPadLinkReturn ret;
-	int return_code = SUCCESS;
+	const gchar *uri = NULL;
+	gboolean is_image = FALSE;
+	int return_code = TRUE;
 
 	g_assert (media->video_scaler);
 	g_assert (media->video_filter);
@@ -281,13 +297,35 @@ set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 									 NULL);
 	if (!gst_element_link (media->video_scaler, media->video_filter))
 	{
-		g_printerr ("Could not link elements together");
+		g_printerr ("Could not link elements together.\n");
 		gst_object_unref (media->video_scaler);
 		gst_object_unref (media->video_filter);
-		return FAILURE;
+		return FALSE;
 	}
 
-	sink_pad = gst_element_get_static_pad (media->video_scaler, "sink");
+	sink_element = media->video_scaler;
+
+	g_object_get (G_OBJECT(media->decoder), "uri", &uri, NULL);
+	is_image = has_image_extension(uri);
+	if (is_image)
+	{
+		media->image_freezer = gst_element_factory_make("imagefreeze", NULL);
+		g_assert (media->image_freezer);
+
+		gst_bin_add (GST_BIN(bin), media->image_freezer);
+
+		if (!gst_element_link (media->image_freezer, media->video_scaler))
+		{
+			g_printerr("Could not link image element.\n");
+			gst_object_unref(media->image_freezer);
+			return FALSE;
+		}
+
+		gst_element_set_state(media->image_freezer, GST_STATE_PAUSED);
+		sink_element = media->image_freezer;
+	}
+
+	sink_pad = gst_element_get_static_pad (sink_element, "sink");
 	g_assert(sink_pad);
 	ret = gst_pad_link (decoder_src_pad, sink_pad);
 
@@ -312,7 +350,7 @@ set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 	ret = gst_pad_link (ghost_pad, output_sink_pad);
 	if (GST_PAD_LINK_FAILED(ret))
 	{
-		return_code = FAILURE;
+		return_code = FALSE;
 		g_print (" Could not link %s and videomixer together\n", media->name);
 	}
 	else
@@ -325,6 +363,9 @@ set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 		g_print (" Link succeeded between %s and videomixer.\n", media->name);
 	}
 
+	if (is_image)
+		gst_element_set_state(media->image_freezer, GST_STATE_PLAYING);
+
 	gst_element_set_state (media->video_scaler, GST_STATE_PLAYING);
 	gst_element_set_state (media->video_filter, GST_STATE_PLAYING);
 
@@ -335,13 +376,13 @@ set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 	return return_code;
 }
 
-int
+gboolean
 set_audio_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 {
 	GstPad *sink_pad = NULL, *ghost_pad = NULL, *output_sink_pad = NULL;
 	GstCaps *caps = NULL;
 	GstPadLinkReturn ret;
-	int return_code = SUCCESS;
+	int return_code = TRUE;
 
 	g_assert(media->audio_volume);
 
@@ -359,8 +400,7 @@ set_audio_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 	gst_element_set_state (media->audio_resampler, GST_STATE_PAUSED);
 	gst_element_set_state (media->audio_filter, GST_STATE_PAUSED);
 
-	caps = gst_caps_from_string
-		        (audio_caps);
+	caps = gst_caps_from_string (audio_caps);
 	g_assert (caps);
 	g_object_set (media->audio_filter, "caps", caps, NULL);
 	gst_caps_unref(caps);
@@ -372,25 +412,17 @@ set_audio_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 														 media->audio_resampler, media->audio_filter, NULL))
 	{
 		g_print ("Could not link audio_converter and audio_volume together\n.");
-		return_code = FAILURE;
+		return_code = FALSE;
 	}
 	else
 	{
-//		if (gst_pad_is_linked(
-//				gst_element_get_static_pad(_global.audio_sink, "sink")))
-//		{
-//			gst_bin_add_many (GST_BIN(_global.pipeline), _global.audio_mixer,
-//												_global.audio_sink, NULL);
-//			gst_element_link(_global.audio_mixer, _global.audio_sink);
-//		}
-
 		sink_pad = gst_element_get_static_pad (media->audio_volume, "sink");
 		g_assert (sink_pad);
 
 		ret = gst_pad_link (decoder_src_pad, sink_pad);
 		if (GST_PAD_LINK_FAILED(ret))
 		{
-			return_code = FAILURE;
+			return_code = FALSE;
 			g_print (" Link failed.\n");
 		}
 		else
@@ -418,7 +450,7 @@ set_audio_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 			ret = gst_pad_link (ghost_pad, output_sink_pad);
 			if (GST_PAD_LINK_FAILED(ret))
 			{
-				return_code = FAILURE;
+				return_code = FALSE;
 				g_print (" Could not link %s and audiomixer together.\n", media->name);
 			}
 

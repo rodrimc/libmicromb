@@ -34,8 +34,10 @@ MbData _global;
 void
 pad_added_handler (GstElement *src, GstPad *new_pad, MbMedia *media);
 
-int
+gboolean
 init (int width, int height);
 
+gboolean
+has_image_extension (const char *uri);
 
 #endif /* UTIL_H_ */

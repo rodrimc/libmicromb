@@ -44,6 +44,8 @@ mb_media_new (const char *media_name, const char *uri,
 	media->video_filter = gst_element_factory_make ("capsfilter", NULL);
 	media->audio_volume = gst_element_factory_make ("volume", NULL);
 
+	media->image_freezer = NULL;
+
 	media->audio_converter = NULL;
 	media->audio_resampler = NULL;
 	media->audio_filter = NULL;
@@ -91,10 +93,10 @@ mb_media_start (MbMedia *media)
 
 	if (ret == GST_STATE_CHANGE_FAILURE)
 	{
-		return FAILURE;
+		return FALSE;
 	}
 
-	return SUCCESS;
+	return TRUE;
 }
 
 GstBus *
@@ -103,7 +105,7 @@ mb_get_message_bus ()
 	return gst_element_get_bus (_global.pipeline);
 }
 
-int
+gboolean
 mb_media_set_size (MbMedia *media, int width, int height)
 {
 	GstCaps *new_caps = NULL;
@@ -114,7 +116,7 @@ mb_media_set_size (MbMedia *media, int width, int height)
 	if (!media->video_filter)
 	{
 		g_printerr ("Video stream not found\n");
-		return FAILURE;
+		return FALSE;
 	}
 
 	filter_sink_pad = gst_element_get_static_pad(media->video_filter, "sink");
@@ -128,19 +130,21 @@ mb_media_set_size (MbMedia *media, int width, int height)
 	g_assert(new_caps);
 
 	g_object_set (G_OBJECT(media->video_filter), "caps", new_caps, NULL);
+	media->width = width;
+	media->height = height;
 
 	//Cleaning up
 	gst_caps_unref(new_caps);
 	gst_object_unref(filter_sink_pad);
 
-	return SUCCESS;
+	return TRUE;
 }
 
-int
+gboolean
 mb_media_set_pos (MbMedia *media, int x, int y)
 {
 	GstElement *element;
-	int return_code = SUCCESS;
+	int return_code = TRUE;
 
 	g_assert (media != NULL);
 
@@ -149,7 +153,7 @@ mb_media_set_pos (MbMedia *media, int x, int y)
 
 	if (media->video_pad_name == NULL)
 	{
-		return_code = FAILURE;
+		return_code = FALSE;
 		g_printerr ("This media has no video output.\n");
 	}
 	else
@@ -174,7 +178,7 @@ mb_media_set_pos (MbMedia *media, int x, int y)
 			media->y_pos = y;
 		}
 		else
-			return_code = FAILURE;
+			return_code = FALSE;
 
 		gst_object_unref(video_mixer_pad);
 	}
@@ -184,11 +188,11 @@ mb_media_set_pos (MbMedia *media, int x, int y)
 	return return_code;
 }
 
-int
+gboolean
 mb_media_set_z (MbMedia *media, int z)
 {
 	GstElement *element;
-	int return_code = SUCCESS;
+	int return_code = TRUE;
 
 	g_assert (media != NULL);
 
@@ -197,7 +201,7 @@ mb_media_set_z (MbMedia *media, int z)
 
 	if (media->video_pad_name == NULL)
 	{
-		return_code = FAILURE;
+		return_code = FALSE;
 		g_printerr ("This media has no visual output\n");
 	}
 	else
@@ -219,7 +223,7 @@ mb_media_set_z (MbMedia *media, int z)
 			media->z_index = z;
 		}
 		else
-			return_code = FAILURE;
+			return_code = FALSE;
 
 		gst_object_unref(video_mixer_pad);
 	}
@@ -229,11 +233,11 @@ mb_media_set_z (MbMedia *media, int z)
 	return return_code;
 }
 
-int
+gboolean
 mb_media_set_alpha (MbMedia *media, double alpha)
 {
 	GstElement *element;
-	int return_code = SUCCESS;
+	int return_code = TRUE;
 
 	g_assert (media != NULL);
 
@@ -242,7 +246,7 @@ mb_media_set_alpha (MbMedia *media, double alpha)
 
 	if (media->video_pad_name == NULL)
 	{
-		return_code = FAILURE;
+		return_code = FALSE;
 		g_printerr ("This media has no visual output\n");
 	}
 	else
@@ -264,7 +268,7 @@ mb_media_set_alpha (MbMedia *media, double alpha)
 			media->alpha = alpha;
 		}
 		else
-			return_code = FAILURE;
+			return_code = FALSE;
 
 		gst_object_unref(video_mixer_pad);
 	}

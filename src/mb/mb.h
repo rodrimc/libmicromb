@@ -11,9 +11,6 @@
 
 #include <gst/gst.h>
 
-#define SUCCESS 0
-#define FAILURE -1
-
 typedef struct
 {
 	gchar *name;
@@ -22,6 +19,9 @@ typedef struct
 	//video
 	GstElement *video_scaler;
 	GstElement *video_filter;
+
+	//image
+	GstElement *image_freezer;
 
 	//audio
 	GstElement *audio_volume;
@@ -40,14 +40,15 @@ typedef struct
 	gint width;
 	gint height;
 	gdouble alpha;
+
 } MbMedia; /*!< Representation of media objects to clients of this library*/
 
 /**
  * \brief	Initializes the library.
  *
- *	@return SUCESS if the library was properly initialized or FAILURE otherwise.
+ *	@return TRUE if the library was properly initialized or FALSE otherwise.
  */
-int
+gboolean
 mb_init ();
 
 
@@ -56,9 +57,9 @@ mb_init ();
  * 	@param width Window width
  *	@param height Window height
  *
- *	@return SUCESS if the library was properly initialized or FAILURE otherwise.
+ *	@return TRUE if the library was properly initialized or FALSE otherwise.
  */
-int
+gboolean
 mb_init_args (int width, int height);
 
 
@@ -89,9 +90,9 @@ mb_media_free (MbMedia *media);
  * 	@param width Width value to set
  * 	@param height Height value to set
  *
- *	@return SUCESS if the property was properly set or FAILURE otherwise.
+ *	@return TRUE if the property was properly set or FALSE otherwise.
  */
-int
+gboolean
 mb_media_set_size (MbMedia *media, int width, int height);
 
 /**
@@ -100,9 +101,9 @@ mb_media_set_size (MbMedia *media, int width, int height);
  * 	@param x New x value
  * 	@param y New y value
  *
- * 	@return SUCESS if the position was properly set or FAILURE otherwise.
+ * 	@return TRUE if the position was properly set or FALSE otherwise.
  */
-int
+gboolean
 mb_media_set_pos (MbMedia *media, int x, int y);
 
 /**
@@ -110,9 +111,9 @@ mb_media_set_pos (MbMedia *media, int x, int y);
  * 	@param media Media pointer to change the property value
  * 	@param z New z value
  *
- * 	@return SUCESS if the position was properly set or FAILURE otherwise.
+ * 	@return TRUE if the position was properly set or FALSE otherwise.
  */
-int
+gboolean
 mb_media_set_z (MbMedia *media, int z);
 
 /**
@@ -120,16 +121,16 @@ mb_media_set_z (MbMedia *media, int z);
  * 	@param media Media pointer to change the property value
  * 	@param alpha New alpha value (allowed values [0, 1])
  *
- * 	@return SUCESS if the position was properly set or FAILURE otherwise.
+ * 	@return TRUE if the position was properly set or FALSE otherwise.
  */
-int
+gboolean
 mb_media_set_alpha (MbMedia *media, double alpha);
 
 /**
  * \brief Starts a media
  * 	@param media Media pointer to be started
  *
- *	@return SUCESS if the media was properly started or FAILURE otherwise.
+ *	@return TRUE if the media was properly started or FALSE otherwise.
  */
 int
 mb_media_start (MbMedia *media);
