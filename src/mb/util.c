@@ -506,3 +506,25 @@ eos_event_cb (GstPad *pad, GstPadProbeInfo *info, gpointer data)
 	}
   return GST_PAD_PROBE_OK;
 }
+
+GstPadProbeReturn
+stop_pad_cb (GstPad *pad, GstPadProbeInfo *info, gpointer media)
+{
+	GstElement *bin = NULL;
+	GstPad *peer;
+
+	GST_DEBUG_OBJECT(pad, "pad is blocked now");
+
+	peer = gst_pad_get_peer (pad);
+	g_assert(peer);
+
+	// remove the probe first
+	gst_pad_remove_probe (pad, GST_PAD_PROBE_INFO_ID(info));
+
+	gst_pad_send_event (peer, gst_event_new_eos ());
+
+	gst_object_unref(peer);
+
+	return GST_PAD_PROBE_OK;
+}
+

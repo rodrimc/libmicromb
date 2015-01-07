@@ -84,7 +84,6 @@ int main (int argc, char *argv[])
   mb_media_set_size(medias[0], width, height);
   mb_media_set_z (medias[0], 0);
   mb_media_set_z (medias[1], 1);
-//  mb_media_set_pos(medias[1], width / 2 - 640 / 2, height / 2 - 480 / 2);
   mb_media_set_pos(medias[1], width * 0.05, height * 0.067);
   mb_media_set_size(medias[1], width * 0.45, height * 0.45);
   mb_media_set_alpha (medias[1], 0.8);
@@ -93,8 +92,8 @@ int main (int argc, char *argv[])
   mb_media_set_size(medias[3], width * 0.25, height * 0.25);
   mb_media_set_z(medias[3], 3);
 
-//  sleep (3);
-//  mb_media_stop(medias[1]);
+  sleep (3);
+  mb_media_stop(medias[2]);
 
 //  sleep (2);
 //

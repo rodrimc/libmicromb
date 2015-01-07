@@ -152,6 +152,16 @@ mb_media_set_alpha (MbMedia *media, double alpha);
 gboolean
 mb_media_start (MbMedia *media);
 
+
+/**
+ * \brief Stops a media
+ * 	@param media Media pointer
+ *
+ *	@return TRUE if the media was properly stopped or FALSE otherwise.
+ */
+gboolean
+mb_media_stop (MbMedia *media);
+
 /**
  * \brief Returns the window height
  *

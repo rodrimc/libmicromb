@@ -46,6 +46,9 @@ void
 pad_added_cb (GstElement *src, GstPad *new_pad, MbMedia *media);
 
 GstPadProbeReturn
+stop_pad_cb (GstPad *pad, GstPadProbeInfo *info, gpointer media);
+
+GstPadProbeReturn
 eos_event_cb (GstPad *pad, GstPadProbeInfo * info, gpointer media);
 
 #endif /* UTIL_H_ */

@@ -100,6 +100,43 @@ mb_media_start (MbMedia *media)
 	return TRUE;
 }
 
+gboolean
+mb_media_stop (MbMedia *media)
+{
+	GstStateChange ret;
+	GstIterator *it = NULL;
+  GValue data = G_VALUE_INIT;
+	GstPad *pad = NULL;
+	gboolean done = FALSE;
+
+	g_assert (media != NULL);
+
+	it = gst_element_iterate_src_pads(media->decoder);
+	while (!done)
+	{
+		switch (gst_iterator_next (it, &data))
+		{
+			case GST_ITERATOR_OK:
+				pad = GST_PAD(g_value_get_object (&data));
+				gst_pad_add_probe (pad, GST_PAD_PROBE_TYPE_BLOCK_DOWNSTREAM, stop_pad_cb,
+													 media, NULL);
+				gst_object_unref (pad);
+				break;
+			case GST_ITERATOR_RESYNC:
+				gst_iterator_resync (it);
+				break;
+			case GST_ITERATOR_ERROR:
+			case GST_ITERATOR_DONE:
+				done = TRUE;
+				break;
+		}
+	}
+
+	gst_iterator_free(it);
+
+	return TRUE;
+}
+
 GstBus *
 mb_get_message_bus ()
 {
@@ -342,7 +379,6 @@ mb_media_free (MbMedia *media)
 
 	media = NULL;
 }
-
 
 void
 mb_clean_up ()
