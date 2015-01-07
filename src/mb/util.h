@@ -25,19 +25,27 @@ typedef struct
 	GstElement *video_sink;
 	GstElement *audio_sink;
 
+	//properties
 	int window_height;
 	int window_width;
+
+	//handlers
+	void (*evt_handler)(MbMediaEvent*);
 } MbData;
 
 MbData _global;
-
-void
-pad_added_handler (GstElement *src, GstPad *new_pad, MbMedia *media);
 
 gboolean
 init (int width, int height);
 
 gboolean
 has_image_extension (const char *uri);
+
+//callbacks
+void
+pad_added_cb (GstElement *src, GstPad *new_pad, MbMedia *media);
+
+GstPadProbeReturn
+eos_event_cb (GstPad *pad, GstPadProbeInfo * info, gpointer media);
 
 #endif /* UTIL_H_ */

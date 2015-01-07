@@ -45,6 +45,21 @@ typedef struct
 	GMutex mutex;
 } MbMedia; /*!< Representation of media objects to clients of this library*/
 
+typedef enum
+{
+	/* FILL ME*/
+	MB_END,
+	MB_PAUSE,
+	MB_BEGIN
+} MbEvent;
+
+typedef struct
+{
+	MbEvent evt;
+	MbMedia *media;
+} MbMediaEvent;
+
+
 /**
  * \brief	Initializes the library.
  *
@@ -99,7 +114,7 @@ mb_media_set_size (MbMedia *media, int width, int height);
 
 /**
  * \brief Set the media position
- * 	@param media Media pointer to change the property value
+ * 	@param media Media pointer
  * 	@param x New x value
  * 	@param y New y value
  *
@@ -110,7 +125,7 @@ mb_media_set_pos (MbMedia *media, int x, int y);
 
 /**
  * \brief Set the zIndex property (zorder)
- * 	@param media Media pointer to change the property value
+ * 	@param media Media pointer
  * 	@param z New z value
  *
  * 	@return TRUE if the position was properly set or FALSE otherwise.
@@ -120,7 +135,7 @@ mb_media_set_z (MbMedia *media, int z);
 
 /**
  * \brief Set the alpha channel value
- * 	@param media Media pointer to change the property value
+ * 	@param media Media pointer
  * 	@param alpha New alpha value (allowed values [0, 1])
  *
  * 	@return TRUE if the position was properly set or FALSE otherwise.
@@ -130,11 +145,11 @@ mb_media_set_alpha (MbMedia *media, double alpha);
 
 /**
  * \brief Starts a media
- * 	@param media Media pointer to be started
+ * 	@param media Media pointer
  *
  *	@return TRUE if the media was properly started or FALSE otherwise.
  */
-int
+gboolean
 mb_media_start (MbMedia *media);
 
 /**
@@ -152,6 +167,22 @@ mb_get_window_height ();
  */
 int
 mb_get_window_width ();
+
+/**
+ * \brief Register a function that is called when an
+ * 					event occurs on medias.
+ *
+ * 	@param handler Function handler.
+ */
+void
+mb_register_handler (void (*)(MbMediaEvent *));
+
+/**
+ * \brief Unregister the handler
+ *
+ */
+void
+mb_unregister_handler ();
 
 
 GstBus *

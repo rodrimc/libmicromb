@@ -7,6 +7,7 @@
  */
 
 #include "util.h"
+#include <stdlib.h>
 
 static char* audio_caps = "audio/x-raw,rate=48000";
 static char *image_exts [] = { ".jpg", ".jpeg", ".png", ".gif", ".bmp", NULL };
@@ -231,12 +232,13 @@ init (int width, int height)
 }
 
 void
-pad_added_handler (GstElement *src, GstPad *new_pad, MbMedia *media)
+pad_added_cb (GstElement *src, GstPad *new_pad, MbMedia *media)
 {
 	GstPadLinkReturn ret;
 	GstCaps *new_pad_caps = NULL;
 	GstStructure *new_pad_struct = NULL;
 	GstElement *bin = NULL;
+	GstPad *peer = NULL;
 	const gchar *new_pad_type = NULL;
 
 	g_assert (media);
@@ -257,11 +259,25 @@ pad_added_handler (GstElement *src, GstPad *new_pad, MbMedia *media)
 	if (g_str_has_prefix(new_pad_type, "video"))
 	{
 		set_video_bin (bin, media, new_pad);
+
+		peer = gst_element_get_static_pad(_global.video_mixer,
+																			media->video_pad_name);
 	}
 	else if (g_str_has_prefix(new_pad_type, "audio"))
 	{
 		set_audio_bin (bin, media, new_pad);
+		peer = gst_element_get_static_pad(_global.audio_mixer,
+																					media->audio_pad_name);
 	}
+
+	if (peer != NULL)
+	{
+		gst_pad_add_probe (peer, GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM,
+									 eos_event_cb, media, NULL);
+
+		gst_object_unref(peer);
+	}
+
 	g_mutex_unlock(&(media->mutex));
 
 	gst_object_unref(bin);
@@ -462,4 +478,31 @@ set_audio_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 		}
 	}
 	return return_code;
+}
+
+GstPadProbeReturn
+eos_event_cb (GstPad *pad, GstPadProbeInfo *info, gpointer data)
+{
+	GstElement *bin = NULL;
+	MbMedia *media = (MbMedia *) data;
+	if (GST_EVENT_TYPE (GST_PAD_PROBE_INFO_DATA (info)) == GST_EVENT_EOS)
+	{
+		gchar *uri = NULL;
+		g_object_get(media->decoder, "uri", &uri, NULL);
+		g_print ("EOS received (%s): %s.\n", media->name, uri);
+
+		if (_global.evt_handler)
+		{
+			MbMediaEvent *evt = (MbMediaEvent *) malloc (sizeof (MbMediaEvent *));
+			evt->evt = MB_END;
+			evt->media = media;
+			_global.evt_handler(evt);
+
+			g_free (evt);
+			evt = NULL;
+		}
+
+		g_free (uri);
+	}
+  return GST_PAD_PROBE_OK;
 }

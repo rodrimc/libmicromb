@@ -69,7 +69,7 @@ mb_media_new (const char *media_name, const char *uri,
 	media->alpha = 1;
 
 	g_object_set (media->decoder, "uri", uri, NULL);
-	g_signal_connect (media->decoder, "pad-added", G_CALLBACK (pad_added_handler),
+	g_signal_connect (media->decoder, "pad-added", G_CALLBACK (pad_added_cb),
 											media);
 
 	gst_bin_add (GST_BIN(media_bin), media->decoder);
@@ -78,7 +78,7 @@ mb_media_new (const char *media_name, const char *uri,
 	return media;
 }
 
-int
+gboolean
 mb_media_start (MbMedia *media)
 {
 	GstStateChange ret;
@@ -90,7 +90,6 @@ mb_media_start (MbMedia *media)
 	g_assert (element);
 
 	ret = gst_element_set_state (element, GST_STATE_PLAYING);
-
 	gst_object_unref(element);
 
 	if (ret == GST_STATE_CHANGE_FAILURE)
@@ -300,6 +299,19 @@ mb_media_set_alpha (MbMedia *media, double alpha)
 	gst_object_unref (element);
 
 	return return_code;
+}
+
+void
+mb_register_handler (void (*handler)(MbMediaEvent*))
+{
+	if (handler != NULL)
+		_global.evt_handler = handler;
+}
+
+void
+mb_unregister_handler ()
+{
+	_global.evt_handler = NULL;
 }
 
 int
