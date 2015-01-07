@@ -15,6 +15,25 @@
 
 #include "mb/mb.h"
 
+void handler (MbMediaEvent *evt)
+{
+	switch (evt->evt)
+	{
+		case MB_BEGIN:
+			g_print ("%s has started.\n", evt->media->name);
+			break;
+		case MB_PAUSE:
+			g_print ("%s has paused.\n", evt->media->name);
+			break;
+		case MB_END:
+			g_print ("%s has ended.\n", evt->media->name);
+			break;
+
+		default:
+			g_printerr ("Unknown event received!\n");
+	}
+}
+
 int main (int argc, char *argv[])
 {
   GstBus *bus;
@@ -31,8 +50,10 @@ int main (int argc, char *argv[])
     return -1;
   }
 
-  if (mb_init () != 0)
+  if (!mb_init_args (800, 600))
    	return -1;
+
+  mb_register_handler(handler);
 
   width = mb_get_window_width ();
   height = mb_get_window_height ();
@@ -48,39 +69,54 @@ int main (int argc, char *argv[])
   	sprintf (alias_buff, "media_%d", i);
 
   	medias[i-1] = mb_media_new (alias_buff, argv[i],
-																width / 2 - 640 / 2, height / 2 - 480 / 2, 0,
-																640, 480);
+																0, 0, 0, width, height);
+																//width / 2 - 640 / 2, height / 2 - 480 / 2, 0,
+																//640, 480);
   }
 
   for (i = 0; i < n; i++)
   {
-  	if (mb_media_start(medias[i]) != 0)
+  	if (!mb_media_start(medias[i]))
   	{
-  		g_printerr ("Unable to set the pipeline to the playing state.\n");
+  		g_printerr ("Unable to start %s.\n", medias[i]->name);
   	}
   }
+  mb_media_set_size(medias[0], width, height);
+  mb_media_set_z (medias[0], 0);
+  mb_media_set_z (medias[1], 1);
+//  mb_media_set_pos(medias[1], width / 2 - 640 / 2, height / 2 - 480 / 2);
+  mb_media_set_pos(medias[1], width * 0.05, height * 0.067);
+  mb_media_set_size(medias[1], width * 0.45, height * 0.45);
+  mb_media_set_alpha (medias[1], 0.8);
 
-  sleep (2);
+  mb_media_set_pos(medias[3], width * 0.15, height * 0.60);
+  mb_media_set_size(medias[3], width * 0.25, height * 0.25);
+  mb_media_set_z(medias[3], 3);
 
-  mb_media_set_z(medias[0], 0);
-  mb_media_set_alpha(medias[0], 0.9);
+//  sleep (3);
+//  mb_media_stop(medias[1]);
 
-  mb_media_set_z(medias[1], 1);
-  mb_media_set_alpha(medias[1], 0.5);
-
-  mb_media_set_z(medias[2], 2);
-  mb_media_set_alpha(medias[2], 0.3);
-
-  for (x = 0; x + 640 < width; x += 150)
-  {
-  	sleep (1);
-  	mb_media_set_pos(medias[0], x, 0);
-  	mb_media_set_pos(medias[2], x, height - 480);
-  }
-
-  mb_media_set_size_property(medias[0], "width", 100);
-  mb_media_set_size_property(medias[1], "width", 200);
-  mb_media_set_size_property(medias[2], "height", 100);
+//  sleep (2);
+//
+//  mb_media_set_z(medias[0], 0);
+//  mb_media_set_alpha(medias[0], 0.9);
+//
+//  mb_media_set_z(medias[1], 1);
+//  mb_media_set_alpha(medias[1], 0.5);
+//
+//  mb_media_set_z(medias[2], 2);
+//  mb_media_set_alpha(medias[2], 0.3);
+//
+//  for (x = 0; x + 640 < width; x += 150)
+//  {
+//  	sleep (1);
+//  	mb_media_set_pos(medias[0], x, 0);
+//  	mb_media_set_pos(medias[2], x, height - 480);
+//  }
+//
+//  mb_media_set_size (medias[0], 100, 480);
+//  mb_media_set_size (medias[1], 200, 480);
+//  mb_media_set_size (medias[2], 640, 100);
 
   bus = mb_get_message_bus();
 
@@ -113,11 +149,11 @@ int main (int argc, char *argv[])
     gst_message_unref (msg);
   }
 
-  for (i = 0; i < n; i++)
-  	mb_media_free(medias[i]);
+//  for (i = 0; i < n; i++)
+//  	mb_media_free(medias[i]);
 
   gst_object_unref (bus);
 
-  mb_clean_up();
+//  mb_clean_up();
   return 0;
 }
