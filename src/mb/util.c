@@ -171,6 +171,7 @@ init (int width, int height)
 	_global.audio_mixer 		= NULL;
 	_global.video_sink  		= NULL;
 	_global.audio_sink  		= NULL;
+	_global.evt_handler			= NULL;
 	_global.window_width 		= width;
 	_global.window_height 	= height;
 
@@ -209,24 +210,21 @@ init (int width, int height)
 
 	set_background();
 
-	ret = gst_element_set_state (_global.pipeline, GST_STATE_PLAYING);
-	if (ret == GST_STATE_CHANGE_FAILURE)
-	{
-		mb_clean_up ();
-		return FALSE;
-	}
+	gst_element_set_state (_global.pipeline, GST_STATE_PLAYING);
 
-	//The following call is necessary because the 'gst_element_set_state'
+	//The following is necessary because the 'gst_element_set_state'
 	//can return GST_STATE_CHANGE_ASYNC. In this case, the function
 	//'gst_element_get_state' blocks until the state has effectively changed.
-	ret = gst_element_get_state (_global.pipeline, &current_state, NULL,
-															 GST_CLOCK_TIME_NONE);
-
-	if (ret == GST_STATE_CHANGE_FAILURE)
+	do
 	{
-		mb_clean_up ();
-		return FALSE;
-	}
+		ret = gst_element_get_state (_global.pipeline, &current_state,
+																 NULL, GST_CLOCK_TIME_NONE);
+		if (ret == GST_STATE_CHANGE_FAILURE)
+		{
+			mb_clean_up ();
+			return FALSE;
+		}
+	} while (current_state != GST_STATE_PLAYING);
 
 	return TRUE;
 }
@@ -379,7 +377,7 @@ set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 		g_object_set (output_sink_pad, "zorder", media->z_index, NULL);
 		g_object_set (output_sink_pad, "alpha", media->alpha, NULL);
 
-		g_print (" Link succeeded between %s and videomixer.\n", media->name);
+		g_debug (" Link succeeded between %s and videomixer.\n", media->name);
 	}
 
 	if (is_image)
@@ -491,16 +489,7 @@ eos_event_cb (GstPad *pad, GstPadProbeInfo *info, gpointer data)
 		g_object_get(media->decoder, "uri", &uri, NULL);
 		g_print ("EOS received (%s): %s.\n", media->name, uri);
 
-		if (_global.evt_handler)
-		{
-			MbMediaEvent *evt = (MbMediaEvent *) malloc (sizeof (MbMediaEvent *));
-			evt->evt = MB_END;
-			evt->media = media;
-			_global.evt_handler(evt);
-
-			g_free (evt);
-			evt = NULL;
-		}
+		notify_handler(MB_END, media);
 
 		g_free (uri);
 	}
@@ -528,3 +517,18 @@ stop_pad_cb (GstPad *pad, GstPadProbeInfo *info, gpointer media)
 	return GST_PAD_PROBE_OK;
 }
 
+void
+notify_handler (MbEvent evt, MbMedia *media)
+{
+	if (_global.evt_handler != NULL)
+	{
+		MbMediaEvent *event = (MbMediaEvent *) malloc (sizeof (MbMediaEvent *));
+		event->evt = evt;
+		event->media = media;
+
+		_global.evt_handler(event);
+
+		g_free (event);
+		event = NULL;
+	}
+}

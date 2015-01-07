@@ -82,21 +82,30 @@ gboolean
 mb_media_start (MbMedia *media)
 {
 	GstStateChange ret;
-	GstElement *element;
+	GstElement *element = NULL;
+	GstState currentState;
 
 	g_assert (media != NULL);
 
 	element = gst_bin_get_by_name (GST_BIN(_global.pipeline), media->name);
 	g_assert (element);
 
-	ret = gst_element_set_state (element, GST_STATE_PLAYING);
-	gst_object_unref(element);
-
-	if (ret == GST_STATE_CHANGE_FAILURE)
+	gst_element_set_state (element, GST_STATE_PLAYING);
+	do
 	{
-		return FALSE;
-	}
+		ret = gst_element_get_state (element, &currentState,
+																 NULL, GST_CLOCK_TIME_NONE);
+		if (ret == GST_STATE_CHANGE_FAILURE)
+			return FALSE;
 
+	} while (currentState != GST_STATE_PLAYING);
+
+	g_print ("'%s' state: %s.\n", media->name,
+					 gst_element_state_get_name(currentState));
+
+	notify_handler(MB_BEGIN, media);
+
+	gst_object_unref(element);
 	return TRUE;
 }
 
