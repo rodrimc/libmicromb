@@ -121,7 +121,9 @@ int main (int argc, char *argv[])
   mb_media_set_size(medias[3], width * 0.25, height * 0.25);
   mb_media_set_z(medias[3], 3);
 
-  sleep (5);
+  mb_media_set_volume(medias[2], 0.09);
+
+  sleep (10);
   mb_media_stop(medias[3]);
 
 //  sleep (2);

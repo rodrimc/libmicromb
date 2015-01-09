@@ -131,6 +131,17 @@ gboolean
 mb_media_set_pos (MbMedia *media, int x, int y);
 
 /**
+ * \brief Set the media volume
+ * 	@param media Media pointer
+ * 	@param volume New volume
+ *
+ * 	@return TRUE if the position was properly set or FALSE otherwise.
+ */
+gboolean
+mb_media_set_volume (MbMedia *media, gdouble volume);
+
+
+/**
  * \brief Set the zIndex property (zorder)
  * 	@param media Media pointer
  * 	@param z New z value

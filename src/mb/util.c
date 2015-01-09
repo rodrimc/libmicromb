@@ -504,7 +504,8 @@ set_audio_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 	GstPadLinkReturn ret;
 	int return_code = TRUE;
 
-	g_assert(media->audio_volume);
+	media->audio_volume = gst_element_factory_make ("volume", NULL);
+	g_assert (media->audio_volume);
 
 	media->audio_converter = gst_element_factory_make ("audioconvert", NULL);
 	g_assert (media->audio_converter);
@@ -522,6 +523,7 @@ set_audio_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 
 	caps = gst_caps_from_string (audio_caps);
 	g_assert (caps);
+
 	g_object_set (media->audio_filter, "caps", caps, NULL);
 	gst_caps_unref(caps);
 
@@ -548,6 +550,9 @@ set_audio_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 		else
 		{
 			g_print (" Link succeeded.\n");
+
+			g_object_set (G_OBJECT(media->audio_volume), "volume", media->volume,
+										NULL);
 
 			gst_element_set_state (media->audio_volume, GST_STATE_PLAYING);
 			gst_element_set_state (media->audio_converter, GST_STATE_PLAYING);

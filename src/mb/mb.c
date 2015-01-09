@@ -44,10 +44,10 @@ mb_media_new (const char *media_name, const char *uri,
 	media->decoder = gst_element_factory_make ("uridecodebin", NULL);
 	media->video_scaler = gst_element_factory_make ("videoscale", NULL);
 	media->video_filter = gst_element_factory_make ("capsfilter", NULL);
-	media->audio_volume = gst_element_factory_make ("volume", NULL);
 
 	media->image_freezer = NULL;
 
+	media->audio_volume = NULL;
 	media->audio_converter = NULL;
 	media->audio_resampler = NULL;
 	media->audio_filter = NULL;
@@ -201,6 +201,41 @@ mb_media_set_size (MbMedia *media, int width, int height)
 	gst_object_unref(filter_sink_pad);
 
 	return TRUE;
+}
+
+gboolean
+mb_media_set_volume (MbMedia *media, gdouble volume)
+{
+	gboolean return_code = TRUE;
+
+	g_assert (media != NULL);
+
+	g_mutex_lock(&(media->mutex));
+
+	if (media->audio_volume == NULL)
+	{
+		return_code = FALSE;
+
+		media->volume = volume;
+		g_printerr ("This media has no audio output yet\n");
+	}
+	else
+	{
+		gdouble m_volume;
+
+		g_object_set (G_OBJECT(media->audio_volume), "volume", volume, NULL);
+
+		//Volume has really changed?
+		g_object_get (G_OBJECT(media->audio_volume), "volume", &m_volume, NULL);
+		if (m_volume == volume)
+			media->volume = volume;
+		else
+			return_code = FALSE;
+	}
+
+	g_mutex_unlock(&(media->mutex));
+
+	return return_code;
 }
 
 gboolean
