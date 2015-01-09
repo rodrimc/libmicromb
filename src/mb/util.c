@@ -75,6 +75,7 @@ bus_cb (GstBus *bus, GstMessage *message, gpointer data)
 									 */
 									gst_object_ref(element);
 									gst_bin_remove(GST_BIN(bin), element);
+									gst_element_set_state(element, GST_STATE_NULL);
 									break;
 								case GST_ITERATOR_RESYNC:
 									gst_iterator_resync (bin_it);
@@ -354,6 +355,8 @@ pad_added_cb (GstElement *src, GstPad *new_pad, MbMedia *media)
 
 	g_mutex_lock(&(media->mutex));
 
+	media->valid_pads++;
+
 	if (g_str_has_prefix(new_pad_type, "video"))
 	{
 		set_video_bin (bin, media, new_pad);
@@ -588,47 +591,62 @@ eos_event_cb (GstPad *pad, GstPadProbeInfo *info, gpointer data)
 		GstStructure *msg_struct = NULL;
 		MbMedia *media;
 		gchar *uri = NULL;
+		int pads = 0;
 
 		media = (MbMedia *) data;
 
 		bin = gst_bin_get_by_name (GST_BIN(_global.pipeline), media->name);
 		g_assert (bin);
 
+		g_mutex_lock(&(media->mutex));
+		pads = media->valid_pads;
+		g_mutex_unlock(&(media->mutex));
+
 		g_object_get(media->decoder, "uri", &uri, NULL);
 		g_print ("EOS received (%s): %s.\n", media->name, uri);
+		g_print ("%s still has %d valid pad(s).\n", media->name, pads);
 
-		notify_handler(MB_END, media);
+		if (pads == 0)
+		{
+			notify_handler(MB_END, media);
 
-		msg_struct = gst_structure_new ("end-media",
-																		"event_type", G_TYPE_INT, APP_EVT_MEDIA_END,
-																		"data", G_TYPE_POINTER, media,
-																		/* FILL ME IF NECESSARY */
-																		NULL);
+			msg_struct = gst_structure_new ("end-media",
+																			"event_type", G_TYPE_INT,
+																											APP_EVT_MEDIA_END,
+																			"data", G_TYPE_POINTER, media,
+																			/* FILL ME IF NECESSARY */
+																			NULL);
 
-		message = gst_message_new_application(GST_OBJECT(bin), msg_struct);
-		gst_bus_post(mb_get_message_bus(), message);
-
+			message = gst_message_new_application(GST_OBJECT(bin), msg_struct);
+			gst_bus_post(mb_get_message_bus(), message);
+		}
 		g_free (uri);
 	}
   return GST_PAD_PROBE_OK;
 }
 
 GstPadProbeReturn
-stop_pad_cb (GstPad *pad, GstPadProbeInfo *info, gpointer media)
+stop_pad_cb (GstPad *pad, GstPadProbeInfo *info, gpointer data)
 {
 	GstElement *bin = NULL;
+	MbMedia *media = NULL;
 	GstPad *peer;
 
 	GST_DEBUG_OBJECT(pad, "pad is blocked now");
+	// remove the probe first
+	gst_pad_remove_probe (pad, GST_PAD_PROBE_INFO_ID(info));
+
+	media = (MbMedia *) data;
+	g_assert (media);
+
+	g_mutex_lock(&(media->mutex));
+	media->valid_pads--;
+	g_mutex_unlock(&(media->mutex));
 
 	peer = gst_pad_get_peer (pad);
 	g_assert(peer);
 
-	// remove the probe first
-	gst_pad_remove_probe (pad, GST_PAD_PROBE_INFO_ID(info));
-
 	gst_pad_send_event (peer, gst_event_new_eos ());
-
 	gst_object_unref(peer);
 
 	return GST_PAD_PROBE_OK;

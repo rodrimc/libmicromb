@@ -60,6 +60,8 @@ mb_media_new (const char *media_name, const char *uri,
 	media->video_pad_name  = NULL;
 	media->audio_pad_name  = NULL;
 
+	media->valid_pads = 0;
+
 	//properties
 	media->x_pos = x;
 	media->y_pos = y;
@@ -137,7 +139,6 @@ mb_media_stop (MbMedia *media)
 				gst_pad_add_probe (pad, GST_PAD_PROBE_TYPE_BLOCK_DOWNSTREAM,
 													 stop_pad_cb, media, NULL);
 
-				gst_object_unref (pad);
 				break;
 			case GST_ITERATOR_RESYNC:
 				gst_iterator_resync (it);
@@ -208,7 +209,7 @@ mb_media_set_pos (MbMedia *media, int x, int y)
 	GstElement *element;
 	int return_code = TRUE;
 
-	g_assert (media != NULL);
+	g_assert (media);
 
 	element = gst_bin_get_by_name (GST_BIN(_global.pipeline), media->name);
 	g_assert (element);

@@ -39,11 +39,11 @@ typedef struct
 	gint z_index;
 	gint width;
 	gint height;
-	gdouble alpha;
-	gdouble volume;
+	gdouble alpha;  /* [0, 1] */
+	gdouble volume; /* [0, 1] */
 
-	//lock
 	GMutex mutex;
+	gint valid_pads;
 } MbMedia; /*!< Representation of media objects to clients of this library*/
 
 typedef enum
