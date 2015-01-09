@@ -12,6 +12,103 @@
 static char* audio_caps = "audio/x-raw,rate=48000";
 static char *image_exts [] = { ".jpg", ".jpeg", ".png", ".gif", ".bmp", NULL };
 
+static gboolean
+bus_cb (GstBus *bus, GstMessage *message, gpointer data)
+{
+	const GstStructure *msg_struct = NULL;
+
+//  g_print ("Got %s message\n", GST_MESSAGE_TYPE_NAME (message));
+
+  switch (GST_MESSAGE_TYPE (message)) {
+    case GST_MESSAGE_ERROR:
+    {
+      GError *err;
+      gchar *debug;
+
+      gst_message_parse_error (message, &err, &debug);
+      g_print ("Error: %s\n", err->message);
+      g_error_free (err);
+      g_free (debug);
+
+      break;
+    }
+    case GST_MESSAGE_APPLICATION:
+    {
+    	int evt_type;
+
+    	msg_struct = gst_message_get_structure(message);
+    	gst_structure_get_int (msg_struct, "event_type", &evt_type);
+
+    	switch (evt_type)
+    	{
+    		case APP_EVT_MEDIA_END:
+    		{
+					if (gst_structure_has_field(msg_struct, "data"))
+					{
+						MbMedia *media = NULL;
+						GstElement *bin = NULL, *element = NULL;
+						GstIterator *bin_it = NULL;
+						GValue data = G_VALUE_INIT;
+						gboolean done = FALSE;
+
+						gst_structure_get (msg_struct, "data", G_TYPE_POINTER, &media,
+															 NULL);
+						g_assert (media);
+
+						bin = gst_bin_get_by_name(GST_BIN(_global.pipeline), media->name);
+						g_assert (bin);
+
+						gst_element_set_state(bin, GST_STATE_NULL);
+						gst_bin_remove (GST_BIN (_global.pipeline), bin);
+
+						bin_it = gst_bin_iterate_elements(GST_BIN(bin));
+						while (!done)
+						{
+							switch (gst_iterator_next (bin_it, &data))
+							{
+								case GST_ITERATOR_OK:
+									element = GST_ELEMENT(g_value_get_object (&data));
+									g_assert (element);
+
+									/* we increment the ref_count to destroy this element
+									 * only when calling the function mb_media_free ()
+									 */
+									gst_object_ref(element);
+									gst_bin_remove(GST_BIN(bin), element);
+									break;
+								case GST_ITERATOR_RESYNC:
+									gst_iterator_resync (bin_it);
+									break;
+								case GST_ITERATOR_ERROR:
+								case GST_ITERATOR_DONE:
+									done = TRUE;
+									break;
+							}
+						}
+						gst_iterator_free(bin_it);
+						gst_object_unref(bin);
+
+						notify_handler(MB_REMOVED, media);
+					}
+					break;
+    		}
+    	}
+
+    	break;
+    }
+    case GST_MESSAGE_EOS:
+    {
+      /* end-of-stream */
+      break;
+    }
+    default:
+      /* unhandled message */
+      break;
+  }
+  return TRUE;
+}
+
+
 gboolean
 has_image_extension (const char *uri)
 {
@@ -172,6 +269,7 @@ init (int width, int height)
 	_global.video_sink  		= NULL;
 	_global.audio_sink  		= NULL;
 	_global.evt_handler			= NULL;
+	_global.bus							= NULL;
 	_global.window_width 		= width;
 	_global.window_height 	= height;
 
@@ -225,6 +323,8 @@ init (int width, int height)
 			return FALSE;
 		}
 	} while (current_state != GST_STATE_PLAYING);
+
+	gst_bus_add_watch (mb_get_message_bus(), bus_cb, NULL);
 
 	return TRUE;
 }
@@ -481,15 +581,32 @@ set_audio_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 GstPadProbeReturn
 eos_event_cb (GstPad *pad, GstPadProbeInfo *info, gpointer data)
 {
-	GstElement *bin = NULL;
-	MbMedia *media = (MbMedia *) data;
 	if (GST_EVENT_TYPE (GST_PAD_PROBE_INFO_DATA (info)) == GST_EVENT_EOS)
 	{
+		GstElement *bin = NULL;
+		GstMessage *message = NULL;
+		GstStructure *msg_struct = NULL;
+		MbMedia *media;
 		gchar *uri = NULL;
+
+		media = (MbMedia *) data;
+
+		bin = gst_bin_get_by_name (GST_BIN(_global.pipeline), media->name);
+		g_assert (bin);
+
 		g_object_get(media->decoder, "uri", &uri, NULL);
 		g_print ("EOS received (%s): %s.\n", media->name, uri);
 
 		notify_handler(MB_END, media);
+
+		msg_struct = gst_structure_new ("end-media",
+																		"event_type", G_TYPE_INT, APP_EVT_MEDIA_END,
+																		"data", G_TYPE_POINTER, media,
+																		/* FILL ME IF NECESSARY */
+																		NULL);
+
+		message = gst_message_new_application(GST_OBJECT(bin), msg_struct);
+		gst_bus_post(mb_get_message_bus(), message);
 
 		g_free (uri);
 	}
@@ -522,13 +639,10 @@ notify_handler (MbEvent evt, MbMedia *media)
 {
 	if (_global.evt_handler != NULL)
 	{
-		MbMediaEvent *event = (MbMediaEvent *) malloc (sizeof (MbMediaEvent *));
-		event->evt = evt;
-		event->media = media;
+		MbMediaEvent event;
+		event.evt = evt;
+		event.media = media;
 
-		_global.evt_handler(event);
-
-		g_free (event);
-		event = NULL;
+		_global.evt_handler(&event);
 	}
 }

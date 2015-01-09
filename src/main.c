@@ -15,20 +15,44 @@
 
 #include "mb/mb.h"
 
+int n, count = 0;
+GMainLoop *loop;
+MbMedia *medias[4];
+
+
 void handler (MbMediaEvent *evt)
 {
 	switch (evt->evt)
 	{
 		case MB_BEGIN:
+		{
 			g_print ("%s has started.\n", evt->media->name);
 			break;
+		}
 		case MB_PAUSE:
+		{
 			g_print ("%s has paused.\n", evt->media->name);
 			break;
+		}
 		case MB_END:
-			g_print ("%s has ended.\n", evt->media->name);
-			break;
+		{
+			if (evt->media == medias[2])
+				mb_media_stop(medias[0]);
 
+			g_print ("%s has ended.\n", evt->media->name);
+			count++;
+			if (count == n)
+				g_main_loop_quit(loop);
+
+			break;
+		}
+		case MB_REMOVED:
+		{
+			g_print ("1: %s has been removed from pipeline.\n", evt->media->name);
+			mb_media_free(evt->media);
+
+			break;
+		}
 		default:
 			g_printerr ("Unknown event received!\n");
 	}
@@ -39,10 +63,9 @@ int main (int argc, char *argv[])
   GstBus *bus;
   GstMessage *msg;
   GstStateChangeReturn ret;
-  MbMedia **medias;
   int width, height, x;
 
-  int i, n;
+  int i;
   if (argc < 2)
   {
 		g_print ("Usage: %s <media uri> ...\n", argv[0]);
@@ -53,6 +76,8 @@ int main (int argc, char *argv[])
   if (!mb_init_args (800, 600))
    	return -1;
 
+  loop = g_main_loop_new (NULL, FALSE);
+
   mb_register_handler(handler);
 
   width = mb_get_window_width ();
@@ -62,7 +87,7 @@ int main (int argc, char *argv[])
 
   n = argc - 1;
 
-  medias = (MbMedia **) malloc (sizeof (MbMedia*) * n);
+//  medias = (MbMedia **) malloc (sizeof (MbMedia*) * n);
   for (i = 1; i <= n; i++)
   {
   	gchar alias_buff [8];
@@ -117,42 +142,44 @@ int main (int argc, char *argv[])
 //  mb_media_set_size (medias[1], 200, 480);
 //  mb_media_set_size (medias[2], 640, 100);
 
-  bus = mb_get_message_bus();
 
-  msg = gst_bus_timed_pop_filtered (bus, GST_CLOCK_TIME_NONE,
-      GST_MESSAGE_EOS | GST_MESSAGE_ERROR);
+  g_print ("Running...\n");
+	g_main_loop_run (loop);
 
-  if (msg != NULL)
-  {
-    GError *err;
-    gchar *debug_info;
+//  bus = mb_get_message_bus();
+//
+//  msg = gst_bus_timed_pop_filtered (bus, GST_CLOCK_TIME_NONE,
+//      GST_MESSAGE_EOS | GST_MESSAGE_ERROR);
+//
+//  if (msg != NULL)
+//  {
+//    GError *err;
+//    gchar *debug_info;
+//
+//    switch (GST_MESSAGE_TYPE (msg))
+//    {
+//      case GST_MESSAGE_ERROR:
+//        gst_message_parse_error (msg, &err, &debug_info);
+//        g_printerr ("Error received from element %s: %s.\n",
+//                    GST_OBJECT_NAME (msg->src), err->message);
+//        g_printerr ("Debugging information: %s\n", debug_info ?
+//        		debug_info : "none");
+//        g_clear_error (&err);
+//        break;
+//      case GST_MESSAGE_EOS:
+//        g_print ("End-Of-Stream reached.\n");
+//        break;
+//      default:
+//        g_printerr ("Unexpected message received.\n");
+//        break;
+//    }
+//
+//    gst_message_unref (msg);
+//  }
 
-    switch (GST_MESSAGE_TYPE (msg))
-    {
-      case GST_MESSAGE_ERROR:
-        gst_message_parse_error (msg, &err, &debug_info);
-        g_printerr ("Error received from element %s: %s.\n",
-                    GST_OBJECT_NAME (msg->src), err->message);
-        g_printerr ("Debugging information: %s\n", debug_info ?
-        		debug_info : "none");
-        g_clear_error (&err);
-        break;
-      case GST_MESSAGE_EOS:
-        g_print ("End-Of-Stream reached.\n");
-        break;
-      default:
-        g_printerr ("Unexpected message received.\n");
-        break;
-    }
+  for (i = 0; i < n; i++)
+  	mb_media_free(medias[i]);
 
-    gst_message_unref (msg);
-  }
-
-//  for (i = 0; i < n; i++)
-//  	mb_media_free(medias[i]);
-
-  gst_object_unref (bus);
-
-//  mb_clean_up();
+  mb_clean_up();
   return 0;
 }

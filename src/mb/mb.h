@@ -40,6 +40,7 @@ typedef struct
 	gint width;
 	gint height;
 	gdouble alpha;
+	gdouble volume;
 
 	//lock
 	GMutex mutex;
@@ -48,9 +49,15 @@ typedef struct
 typedef enum
 {
 	/* FILL ME*/
+
+	//Presentation
 	MB_END,
 	MB_PAUSE,
-	MB_BEGIN
+	MB_BEGIN,
+
+	//Application
+	MB_REMOVED
+
 } MbEvent;
 
 typedef struct

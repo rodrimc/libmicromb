@@ -12,6 +12,12 @@
 #include <gst/gst.h>
 #include "mb.h"
 
+typedef enum
+{
+	APP_EVT_MEDIA_END
+	/* FILL ME */
+}AppEventType;
+
 typedef struct
 {
 	//pipeline
@@ -28,6 +34,9 @@ typedef struct
 	//properties
 	int window_height;
 	int window_width;
+
+	//bus
+	GstBus *bus;
 
 	//handlers
 	void (*evt_handler)(MbMediaEvent*);
