@@ -119,9 +119,15 @@ mb_media_stop (MbMedia *media)
 	GstPad *pad = NULL;
 	gboolean done = FALSE;
 
-	g_assert (media != NULL);
+	g_assert (media);
 
-	it = gst_element_iterate_src_pads(media->decoder);
+	/*
+	 * If the media is an image (media->image_freezer != 0), our concern
+	 * should be the image_freezer's source pad instead of the decoder's
+	 * source pad (block this pad cause no effect).
+	 */
+	it = gst_element_iterate_src_pads(media->image_freezer == NULL ?
+																		media->decoder : media->image_freezer);
 	while (!done)
 	{
 		switch (gst_iterator_next (it, &data))
