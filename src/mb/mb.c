@@ -481,4 +481,10 @@ mb_clean_up ()
 		gst_element_set_state(_global.pipeline, GST_STATE_NULL);
 		gst_object_unref(_global.pipeline);
 	}
+
+	if (_global.loop != NULL)
+	{
+		g_main_loop_quit(_global.loop);
+		g_main_loop_unref(_global.loop);
+	}
 }

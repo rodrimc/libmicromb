@@ -17,9 +17,8 @@ bus_cb (GstBus *bus, GstMessage *message, gpointer data)
 {
 	const GstStructure *msg_struct = NULL;
 
-//  g_print ("Got %s message\n", GST_MESSAGE_TYPE_NAME (message));
-
-  switch (GST_MESSAGE_TYPE (message)) {
+  switch (GST_MESSAGE_TYPE (message))
+  {
     case GST_MESSAGE_ERROR:
     {
       GError *err;
@@ -73,6 +72,8 @@ bus_cb (GstBus *bus, GstMessage *message, gpointer data)
 									/* we increment the ref_count to destroy this element
 									 * only when calling the function mb_media_free ()
 									 */
+									g_print ("Removing %s from pipeline.\n", media->name);
+
 									gst_object_ref(element);
 									gst_bin_remove(GST_BIN(bin), element);
 									gst_element_set_state(element, GST_STATE_NULL);
@@ -107,6 +108,14 @@ bus_cb (GstBus *bus, GstMessage *message, gpointer data)
       break;
   }
   return TRUE;
+}
+
+static void
+main_loop_thread  ()
+{
+	_global.loop = g_main_loop_new (NULL, FALSE);
+	g_main_loop_run (_global.loop);
+	g_thread_exit (0);
 }
 
 
@@ -270,6 +279,7 @@ init (int width, int height)
 	_global.video_sink  		= NULL;
 	_global.audio_sink  		= NULL;
 	_global.evt_handler			= NULL;
+	_global.loop						= NULL;
 	_global.bus							= NULL;
 	_global.window_width 		= width;
 	_global.window_height 	= height;
@@ -325,7 +335,14 @@ init (int width, int height)
 		}
 	} while (current_state != GST_STATE_PLAYING);
 
-	gst_bus_add_watch (mb_get_message_bus(), bus_cb, NULL);
+	if ((_global.loop_thread = g_thread_create ((GThreadFunc) main_loop_thread,
+																							NULL, FALSE, NULL)) == NULL)
+	{
+		g_printerr ("Could not create message handler thread.\n");
+		mb_clean_up();
+		return FALSE;
+	}
+	gst_bus_add_watch (mb_get_message_bus (), bus_cb, NULL);
 
 	return TRUE;
 }
@@ -604,7 +621,7 @@ eos_event_cb (GstPad *pad, GstPadProbeInfo *info, gpointer data)
 		g_assert (bin);
 
 		g_mutex_lock(&(media->mutex));
-		pads = media->valid_pads;
+		pads = --media->valid_pads;
 		g_mutex_unlock(&(media->mutex));
 
 		g_object_get(media->decoder, "uri", &uri, NULL);
@@ -623,7 +640,8 @@ eos_event_cb (GstPad *pad, GstPadProbeInfo *info, gpointer data)
 																			NULL);
 
 			message = gst_message_new_application(GST_OBJECT(bin), msg_struct);
-			gst_bus_post(mb_get_message_bus(), message);
+			g_print ("Posting event\n");
+			gst_bus_post(_global.bus, message);
 		}
 		g_free (uri);
 	}
@@ -643,10 +661,6 @@ stop_pad_cb (GstPad *pad, GstPadProbeInfo *info, gpointer data)
 
 	media = (MbMedia *) data;
 	g_assert (media);
-
-	g_mutex_lock(&(media->mutex));
-	media->valid_pads--;
-	g_mutex_unlock(&(media->mutex));
 
 	peer = gst_pad_get_peer (pad);
 	g_assert(peer);

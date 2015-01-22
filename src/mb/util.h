@@ -37,6 +37,8 @@ typedef struct
 
 	//bus
 	GstBus *bus;
+	GMainLoop *loop; //It is needed to handle messages coming from the bus.
+	GThread *loop_thread;
 
 	//handlers
 	void (*evt_handler)(MbMediaEvent*);
