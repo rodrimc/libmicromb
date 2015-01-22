@@ -335,8 +335,9 @@ init (int width, int height)
 		}
 	} while (current_state != GST_STATE_PLAYING);
 
-	if ((_global.loop_thread = g_thread_create ((GThreadFunc) main_loop_thread,
-																							NULL, FALSE, NULL)) == NULL)
+	if ((_global.loop_thread = g_thread_new ("bus_thread",
+																					 (GThreadFunc) main_loop_thread,
+																					 NULL)) == NULL)
 	{
 		g_printerr ("Could not create message handler thread.\n");
 		mb_clean_up();
