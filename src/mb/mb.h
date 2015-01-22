@@ -67,7 +67,7 @@ typedef struct
 } MbMediaEvent;
 
 
-/**
+/*!
  * \brief	Initializes the library.
  *
  *	@return TRUE if the library was properly initialized or FALSE otherwise.
@@ -76,7 +76,7 @@ gboolean
 mb_init ();
 
 
-/**
+/*!
  * \brief	Initializes the library.
  * 	@param width Window width
  *	@param height Window height
@@ -87,7 +87,7 @@ gboolean
 mb_init_args (int width, int height);
 
 
-/**
+/*!
  * \brief	Creates a new MbMedia.
  * 	@param media_name Name of the media (identifier)
  *	@param uri Media URI
@@ -100,7 +100,7 @@ MbMedia *
 mb_media_new (const char *media_name, const char *uri,
 							int x, int y, int z, int width, int height);
 
-/**
+/*!
  * \brief Frees a MbMedia
  * @param media MbMedia pointer
  */
@@ -108,7 +108,7 @@ mb_media_new (const char *media_name, const char *uri,
 void
 mb_media_free (MbMedia *media);
 
-/**
+/*!
  * \brief Change the value of a size property
  * 	@param media Media pointer
  * 	@param width Width value to set
@@ -119,7 +119,7 @@ mb_media_free (MbMedia *media);
 gboolean
 mb_media_set_size (MbMedia *media, int width, int height);
 
-/**
+/*!
  * \brief Set the media position
  * 	@param media Media pointer
  * 	@param x New x value
@@ -130,7 +130,7 @@ mb_media_set_size (MbMedia *media, int width, int height);
 gboolean
 mb_media_set_pos (MbMedia *media, int x, int y);
 
-/**
+/*!
  * \brief Set the media volume
  * 	@param media Media pointer
  * 	@param volume New volume
@@ -141,7 +141,7 @@ gboolean
 mb_media_set_volume (MbMedia *media, gdouble volume);
 
 
-/**
+/*!
  * \brief Set the zIndex property (zorder)
  * 	@param media Media pointer
  * 	@param z New z value
@@ -151,7 +151,7 @@ mb_media_set_volume (MbMedia *media, gdouble volume);
 gboolean
 mb_media_set_z (MbMedia *media, int z);
 
-/**
+/*!
  * \brief Set the alpha channel value
  * 	@param media Media pointer
  * 	@param alpha New alpha value (allowed values [0, 1])
@@ -161,7 +161,7 @@ mb_media_set_z (MbMedia *media, int z);
 gboolean
 mb_media_set_alpha (MbMedia *media, double alpha);
 
-/**
+/*!
  * \brief Starts a media
  * 	@param media Media pointer
  *
@@ -171,7 +171,7 @@ gboolean
 mb_media_start (MbMedia *media);
 
 
-/**
+/*!
  * \brief Stops a media
  * 	@param media Media pointer
  *
@@ -180,7 +180,7 @@ mb_media_start (MbMedia *media);
 gboolean
 mb_media_stop (MbMedia *media);
 
-/**
+/*!
  * \brief Returns the window height
  *
  *	@return Window height.
@@ -188,7 +188,7 @@ mb_media_stop (MbMedia *media);
 int
 mb_get_window_height ();
 
-/**
+/*!
  * \brief Returns the window width
  *
  *	@return Window width.
@@ -196,7 +196,7 @@ mb_get_window_height ();
 int
 mb_get_window_width ();
 
-/**
+/*!
  * \brief Register a function that is called when an
  * 					event occurs on medias.
  *
@@ -205,7 +205,7 @@ mb_get_window_width ();
 void
 mb_register_handler (void (*)(MbMediaEvent *));
 
-/**
+/*!
  * \brief Unregister the handler
  *
  */
@@ -216,7 +216,7 @@ mb_unregister_handler ();
 GstBus *
 mb_get_message_bus ();
 
-/**
+/*!
  * \brief Frees internal data structures.
  *
  * \detail Should be called on the end of the application.
