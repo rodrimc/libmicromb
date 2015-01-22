@@ -72,8 +72,8 @@ mb_media_new (const char *media_name, const char *uri,
 	media->volume = 1.0;
 
 	g_object_set (media->decoder, "uri", uri, NULL);
-	g_signal_connect (media->decoder, "pad-added", G_CALLBACK (pad_added_cb),
-											media);
+	g_signal_connect (G_OBJECT(media->decoder), "pad-added",
+										G_CALLBACK (pad_added_cb), media);
 
 	gst_bin_add (GST_BIN(media_bin), media->decoder);
 	gst_bin_add (GST_BIN(_global.pipeline), media_bin);
@@ -486,5 +486,8 @@ mb_clean_up ()
 	{
 		g_main_loop_quit(_global.loop);
 		g_main_loop_unref(_global.loop);
+		g_thread_unref(_global.loop_thread);
 	}
+
+	gst_deinit();
 }

@@ -229,6 +229,8 @@ set_background ()
 
 		gst_object_unref (src_pad);
 		gst_object_unref (mixer_sink_pad);
+		src_pad = NULL;
+		mixer_sink_pad = NULL;
 
 		//audio
 		src_pad = gst_element_get_static_pad(audio_capsfilter, "src");
@@ -254,6 +256,7 @@ set_background ()
 			gst_structure_get_int(audio_caps_structure, "rate", &rate);
 		}
 
+		gst_caps_unref(audio_caps);
 		gst_object_unref (src_pad);
 		gst_object_unref (mixer_sink_pad);
 	}
@@ -412,7 +415,7 @@ set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 	GstCaps *caps = NULL;
 	GstPad *sink_pad = NULL, *ghost_pad = NULL, *output_sink_pad = NULL;
 	GstPadLinkReturn ret;
-	const gchar *uri = NULL;
+	gchar *uri = NULL;
 	gboolean is_image = FALSE;
 	int return_code = TRUE;
 
@@ -445,6 +448,9 @@ set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 
 	g_object_get (G_OBJECT(media->decoder), "uri", &uri, NULL);
 	is_image = has_image_extension(uri);
+
+	g_free (uri);
+
 	if (is_image)
 	{
 		media->image_freezer = gst_element_factory_make("imagefreeze", NULL);
