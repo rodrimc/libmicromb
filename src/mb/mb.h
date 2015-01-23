@@ -14,6 +14,8 @@
 typedef struct
 {
 	gchar *name;
+
+	GstElement *bin;
 	GstElement *decoder;
 
 	//video

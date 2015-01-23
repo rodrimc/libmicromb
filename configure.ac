@@ -15,7 +15,7 @@ AC_PROG_CC
 PKG_CHECK_MODULES([GSTREAMER], [gstreamer-1.0], [],
    	[AC_MSG_ERROR([The gstreamer-1.0 is required.])])
 
-AC_CONFIG_FILES(Makefile src/Makefile)
+AC_CONFIG_FILES(Makefile src/Makefile src/tests/Makefile)
 
 AC_OUTPUT
 

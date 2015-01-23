@@ -32,7 +32,6 @@ MbMedia *
 mb_media_new (const char *media_name, const char *uri,
 							int x, int y, int z, int width, int height)
 {
-	GstElement *media_bin = NULL;
 	size_t lenght;
 	MbMedia *media;
 
@@ -40,7 +39,7 @@ mb_media_new (const char *media_name, const char *uri,
 
 	g_mutex_init (&(media->mutex));
 
-	media_bin = gst_bin_new (media_name);
+	media->bin = gst_bin_new (media_name);
 	media->decoder = gst_element_factory_make ("uridecodebin", NULL);
 	media->video_scaler = gst_element_factory_make ("videoscale", NULL);
 	media->video_filter = gst_element_factory_make ("capsfilter", NULL);
@@ -75,8 +74,7 @@ mb_media_new (const char *media_name, const char *uri,
 	g_signal_connect (G_OBJECT(media->decoder), "pad-added",
 										G_CALLBACK (pad_added_cb), media);
 
-	gst_bin_add (GST_BIN(media_bin), media->decoder);
-	gst_bin_add (GST_BIN(_global.pipeline), media_bin);
+	gst_bin_add (GST_BIN(media->bin), media->decoder);
 
 	return media;
 }
@@ -85,18 +83,16 @@ gboolean
 mb_media_start (MbMedia *media)
 {
 	GstStateChange ret;
-	GstElement *element = NULL;
 	GstState current_state;
 
 	g_assert (media != NULL);
 
-	element = gst_bin_get_by_name (GST_BIN(_global.pipeline), media->name);
-	g_assert (element);
+	gst_bin_add (GST_BIN(_global.pipeline), media->bin);
 
-	gst_element_set_state (element, GST_STATE_PLAYING);
+	gst_element_set_state (media->bin, GST_STATE_PLAYING);
 	do
 	{
-		ret = gst_element_get_state (element, &current_state,
+		ret = gst_element_get_state (media->bin, &current_state,
 																 NULL, GST_CLOCK_TIME_NONE);
 		if (ret == GST_STATE_CHANGE_FAILURE)
 			return FALSE;
@@ -108,7 +104,6 @@ mb_media_start (MbMedia *media)
 
 	notify_handler(MB_BEGIN, media);
 
-	gst_object_unref(element);
 	return TRUE;
 }
 
@@ -241,13 +236,10 @@ mb_media_set_volume (MbMedia *media, gdouble volume)
 gboolean
 mb_media_set_pos (MbMedia *media, int x, int y)
 {
-	GstElement *element;
 	int return_code = TRUE;
 
 	g_assert (media);
-
-	element = gst_bin_get_by_name (GST_BIN(_global.pipeline), media->name);
-	g_assert (element);
+	g_assert (media->bin);
 
 	g_mutex_lock(&(media->mutex));
 
@@ -256,8 +248,6 @@ mb_media_set_pos (MbMedia *media, int x, int y)
 		return_code = FALSE;
 		media->x_pos = x;
 		media->y_pos = y;
-
-		g_printerr ("This media has no video output yet.\n");
 	}
 	else
 	{
@@ -288,21 +278,16 @@ mb_media_set_pos (MbMedia *media, int x, int y)
 
 	g_mutex_unlock(&(media->mutex));
 
-	gst_object_unref (element);
-
 	return return_code;
 }
 
 gboolean
 mb_media_set_z (MbMedia *media, int z)
 {
-	GstElement *element;
 	int return_code = TRUE;
 
 	g_assert (media != NULL);
-
-	element = gst_bin_get_by_name (GST_BIN(_global.pipeline), media->name);
-	g_assert (element);
+	g_assert (media->bin);
 
 	g_mutex_lock(&(media->mutex));
 
@@ -310,8 +295,6 @@ mb_media_set_z (MbMedia *media, int z)
 	{
 		return_code = FALSE;
 		media->z_index = z;
-
-		g_printerr ("This media has no visual output yet\n");
 	}
 	else
 	{
@@ -339,21 +322,16 @@ mb_media_set_z (MbMedia *media, int z)
 
 	g_mutex_unlock(&(media->mutex));
 
-	gst_object_unref (element);
-
 	return return_code;
 }
 
 gboolean
 mb_media_set_alpha (MbMedia *media, double alpha)
 {
-	GstElement *element;
 	int return_code = TRUE;
 
 	g_assert (media != NULL);
-
-	element = gst_bin_get_by_name (GST_BIN(_global.pipeline), media->name);
-	g_assert (element);
+	g_assert (media->bin);
 
 	g_mutex_lock(&(media->mutex));
 
@@ -389,8 +367,6 @@ mb_media_set_alpha (MbMedia *media, double alpha)
 	}
 	g_mutex_unlock(&(media->mutex));
 
-	gst_object_unref (element);
-
 	return return_code;
 }
 
@@ -423,6 +399,8 @@ void
 mb_media_free (MbMedia *media)
 {
 	g_assert (media != NULL);
+
+	gst_object_unref (media->bin);
 
 	gst_object_unref(media->decoder);
 
@@ -478,6 +456,8 @@ mb_clean_up ()
 
 	if (_global.pipeline != NULL)
 	{
+		gst_object_unref(_global.clock_provider);
+
 		gst_element_set_state(_global.pipeline, GST_STATE_NULL);
 		gst_object_unref(_global.pipeline);
 	}

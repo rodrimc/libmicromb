@@ -35,6 +35,9 @@ typedef struct
 	int window_height;
 	int window_width;
 
+	//clock
+	GstClock *clock_provider;
+
 	//bus
 	GstBus *bus;
 	GMainLoop *loop; //It is needed to handle messages coming from the bus.

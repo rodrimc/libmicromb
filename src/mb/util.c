@@ -118,7 +118,6 @@ main_loop_thread  ()
 	g_thread_exit (0);
 }
 
-
 gboolean
 has_image_extension (const char *uri)
 {
@@ -281,6 +280,7 @@ init (int width, int height)
 	_global.audio_mixer 		= NULL;
 	_global.video_sink  		= NULL;
 	_global.audio_sink  		= NULL;
+	_global.clock_provider	= NULL;
 	_global.evt_handler			= NULL;
 	_global.loop						= NULL;
 	_global.bus							= NULL;
@@ -348,6 +348,8 @@ init (int width, int height)
 	}
 	gst_bus_add_watch (mb_get_message_bus (), bus_cb, NULL);
 
+	_global.clock_provider = gst_element_get_clock(_global.pipeline);
+
 	return TRUE;
 }
 
@@ -357,9 +359,9 @@ pad_added_cb (GstElement *src, GstPad *new_pad, MbMedia *media)
 	GstPadLinkReturn ret;
 	GstCaps *new_pad_caps = NULL;
 	GstStructure *new_pad_struct = NULL;
-	GstElement *bin = NULL;
 	GstPad *peer = NULL;
 	const gchar *new_pad_type = NULL;
+	gboolean success = FALSE;
 
 	g_assert (media);
 
@@ -371,8 +373,6 @@ pad_added_cb (GstElement *src, GstPad *new_pad, MbMedia *media)
 	new_pad_type = gst_structure_get_name (new_pad_struct);
 
 	g_print ("New pad type: %s\n", new_pad_type);
-	bin = gst_bin_get_by_name(GST_BIN(_global.pipeline), media->name);
-	g_assert (bin);
 
 	g_mutex_lock(&(media->mutex));
 
@@ -380,29 +380,35 @@ pad_added_cb (GstElement *src, GstPad *new_pad, MbMedia *media)
 
 	if (g_str_has_prefix(new_pad_type, "video"))
 	{
-		set_video_bin (bin, media, new_pad);
+		success = set_video_bin (media->bin, media, new_pad);
 
-		peer = gst_element_get_static_pad(_global.video_mixer,
-																			media->video_pad_name);
+		if (success)
+			peer = gst_element_get_static_pad(_global.video_mixer,
+																				media->video_pad_name);
 	}
 	else if (g_str_has_prefix(new_pad_type, "audio"))
 	{
-		set_audio_bin (bin, media, new_pad);
-		peer = gst_element_get_static_pad(_global.audio_mixer,
+		success = set_audio_bin (media->bin, media, new_pad);
+
+		if (success)
+			peer = gst_element_get_static_pad(_global.audio_mixer,
 																					media->audio_pad_name);
 	}
 
-	if (peer != NULL)
+	if (success)
 	{
-		gst_pad_add_probe (peer, GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM,
-									 eos_event_cb, media, NULL);
+		gst_pad_set_offset (new_pad, gst_clock_get_time(_global.clock_provider));
 
-		gst_object_unref(peer);
+		if (peer != NULL)
+		{
+			gst_pad_add_probe (peer, GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM,
+										 eos_event_cb, media, NULL);
+
+			gst_object_unref(peer);
+		}
 	}
 
 	g_mutex_unlock(&(media->mutex));
-
-	gst_object_unref(bin);
 
 	if (new_pad_caps != NULL)
 		gst_caps_unref (new_pad_caps);
@@ -625,34 +631,33 @@ eos_event_cb (GstPad *pad, GstPadProbeInfo *info, gpointer data)
 		media = (MbMedia *) data;
 
 		bin = gst_bin_get_by_name (GST_BIN(_global.pipeline), media->name);
-		g_assert (bin);
+		g_assert(bin);
 
-		g_mutex_lock(&(media->mutex));
+		g_mutex_lock (&(media->mutex));
 		pads = --media->valid_pads;
-		g_mutex_unlock(&(media->mutex));
+		g_mutex_unlock (&(media->mutex));
 
-		g_object_get(media->decoder, "uri", &uri, NULL);
+		g_object_get (media->decoder, "uri", &uri, NULL);
 		g_print ("EOS received (%s): %s.\n", media->name, uri);
 		g_print ("%s still has %d valid pad(s).\n", media->name, pads);
 
 		if (pads == 0)
 		{
-			notify_handler(MB_END, media);
+			notify_handler (MB_END, media);
 
-			msg_struct = gst_structure_new ("end-media",
-																			"event_type", G_TYPE_INT,
-																											APP_EVT_MEDIA_END,
-																			"data", G_TYPE_POINTER, media,
+			msg_struct = gst_structure_new ("end-media", "event_type", G_TYPE_INT,
+																			APP_EVT_MEDIA_END, "data", G_TYPE_POINTER,
+																			media,
 																			/* FILL ME IF NECESSARY */
 																			NULL);
 
-			message = gst_message_new_application(GST_OBJECT(bin), msg_struct);
+			message = gst_message_new_application (GST_OBJECT(bin), msg_struct);
 			g_print ("Posting event\n");
-			gst_bus_post(_global.bus, message);
+			gst_bus_post (_global.bus, message);
 		}
 		g_free (uri);
 	}
-  return GST_PAD_PROBE_OK;
+	return GST_PAD_PROBE_OK;
 }
 
 GstPadProbeReturn

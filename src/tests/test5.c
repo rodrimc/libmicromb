@@ -49,7 +49,6 @@ void handler (MbMediaEvent *evt)
 		case MB_REMOVED:
 		{
 			g_print ("%s has been removed from pipeline.\n", evt->media->name);
-			//mb_media_free(evt->media);
 
 			count++;
 			if (count == n)
@@ -91,7 +90,6 @@ int main (int argc, char *argv[])
 
   n = argc - 1;
 
-//  medias = (MbMedia **) malloc (sizeof (MbMedia*) * n);
   for (i = 1; i <= n; i++)
   {
   	gchar alias_buff [8];
@@ -125,29 +123,6 @@ int main (int argc, char *argv[])
 
   sleep (10);
   mb_media_stop(medias[3]);
-
-//  sleep (2);
-//
-//  mb_media_set_z(medias[0], 0);
-//  mb_media_set_alpha(medias[0], 0.9);
-//
-//  mb_media_set_z(medias[1], 1);
-//  mb_media_set_alpha(medias[1], 0.5);
-//
-//  mb_media_set_z(medias[2], 2);
-//  mb_media_set_alpha(medias[2], 0.3);
-//
-//  for (x = 0; x + 640 < width; x += 150)
-//  {
-//  	sleep (1);
-//  	mb_media_set_pos(medias[0], x, 0);
-//  	mb_media_set_pos(medias[2], x, height - 480);
-//  }
-//
-//  mb_media_set_size (medias[0], 100, 480);
-//  mb_media_set_size (medias[1], 200, 480);
-//  mb_media_set_size (medias[2], 640, 100);
-
 
   g_print ("Running...\n");
 	g_main_loop_run (loop);
