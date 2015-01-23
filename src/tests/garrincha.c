@@ -54,10 +54,14 @@ void handler (MbMediaEvent *evt)
 		}
 		case MB_REMOVED:
 		{
+			gboolean quit = FALSE;
 			g_print ("%s has been removed from pipeline.\n", evt->media->name);
+			if (evt->media == background)
+				quit = TRUE;
+
 			mb_media_free(evt->media);
 
-			if (g_strcmp0(evt->media->name, "background") == 0)
+			if (quit)
 				g_main_loop_quit(loop);
 
 			break;
