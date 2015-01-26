@@ -76,8 +76,6 @@ int main (int argc, char *argv[])
    													"Libmb/resources/lipsync.mp3", 0, 0, 0, 0, 0);
 
   mb_media_start(medias[0]);
-
-  sleep (5);
   mb_media_start(medias[1]);
 
   g_print ("Running...\n");
