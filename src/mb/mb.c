@@ -89,6 +89,8 @@ mb_media_start (MbMedia *media)
 
 	gst_bin_add (GST_BIN(_global.pipeline), media->bin);
 
+	media->start_offset = gst_clock_get_time(_global.clock_provider);
+
 	gst_element_set_state (media->bin, GST_STATE_PLAYING);
 	do
 	{

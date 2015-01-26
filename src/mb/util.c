@@ -397,7 +397,7 @@ pad_added_cb (GstElement *src, GstPad *new_pad, MbMedia *media)
 
 	if (success)
 	{
-		gst_pad_set_offset (new_pad, gst_clock_get_time(_global.clock_provider));
+		gst_pad_set_offset (new_pad, media->start_offset);
 
 		if (peer != NULL)
 		{

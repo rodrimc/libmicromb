@@ -31,6 +31,9 @@ typedef struct
 	GstElement *audio_resampler;
 	GstElement *audio_filter;
 
+	//clock
+	GstClockTime start_offset;
+
 	//pads
 	gchar *video_pad_name;
 	gchar *audio_pad_name;
