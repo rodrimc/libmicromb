@@ -18,7 +18,11 @@ the examples it's necessary to change those paths.
 
 ##How to compile
 ./bootstrap
+
 ./configure
+
+./make
+
 ./make install
 
 ##Dependencies
