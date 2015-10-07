@@ -1,31 +1,35 @@
 bin_PROGRAMS = garrincha \
-			   test0 \
-			   test1 \
+							 test0 \
+							 test1 \
                test2 \
                test3 \
                test4 
 
-garrincha_SOURCES = garrincha.c ../mb/util.c ../mb/mb.c
-test0_SOURCES = test0.c ../mb/util.c ../mb/mb.c
-test1_SOURCES = test1.c ../mb/util.c ../mb/mb.c
-test2_SOURCES = test2.c ../mb/util.c ../mb/mb.c
-test3_SOURCES = test3.c ../mb/util.c ../mb/mb.c
-test4_SOURCES = test4.c ../mb/util.c ../mb/mb.c
-				
-garrincha_CFLAGS = $(GSTREAMER_CFLAGS) -I../
-garrincha_LDADD = $(GSTREAMER_LIBS)
-				
-test0_CFLAGS = $(GSTREAMER_CFLAGS) -I../
-test0_LDADD = $(GSTREAMER_LIBS)
-				
-test1_CFLAGS = $(GSTREAMER_CFLAGS) -I../
-test1_LDADD = $(GSTREAMER_LIBS)
+MICROMB_CFLAGS = -I$(includedir)/micromb-0.10/
 
-test2_CFLAGS = $(GSTREAMER_CFLAGS) -I../
-test2_LDADD = $(GSTREAMER_LIBS)
+MICROMB_LDFLAGS =  -lmicromb
 
-test3_CFLAGS = $(GSTREAMER_CFLAGS) -I../
-test3_LDADD = $(GSTREAMER_LIBS)
+garrincha_SOURCES = garrincha.c 
+test0_SOURCES = test0.c 
+test1_SOURCES = test1.c
+test2_SOURCES = test2.c
+test3_SOURCES = test3.c
+test4_SOURCES = test4.c
+				
+garrincha_CFLAGS = $(GSTREAMER_CFLAGS) $(MICROMB_CFLAGS)
+garrincha_LDADD = $(GSTREAMER_LIBS) $(MICROMB_LDFLAGS)
 
-test4_CFLAGS = $(GSTREAMER_CFLAGS) -I../
-test4_LDADD = $(GSTREAMER_LIBS)
+test0_CFLAGS = $(GSTREAMER_CFLAGS) $(MICROMB_CFLAGS)
+test0_LDADD = $(GSTREAMER_LIBS) $(MICROMB_LDFLAGS)
+
+test1_CFLAGS = $(GSTREAMER_CFLAGS)$(MICROMB_CFLAGS)
+test1_LDADD = $(GSTREAMER_LIBS) $(MICROMB_LDFLAGS)
+
+test2_CFLAGS = $(GSTREAMER_CFLAGS) $(MICROMB_CFLAGS)
+test2_LDADD = $(GSTREAMER_LIBS) $(MICROMB_LDFLAGS)
+
+test3_CFLAGS = $(GSTREAMER_CFLAGS) $(MICROMB_CFLAGS)
+test3_LDADD = $(GSTREAMER_LIBS) $(MICROMB_LDFLAGS)
+
+test4_CFLAGS = $(GSTREAMER_CFLAGS) $(MICROMB_CFLAGS)
+test4_LDADD = $(GSTREAMER_LIBS) $(MICROMB_LDFLAGS)

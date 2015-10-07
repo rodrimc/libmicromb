@@ -1,5 +1,4 @@
 SUBDIRS = \
-		src\
-    src/tests
+		src
 		
 		

@@ -1,7 +1,13 @@
 dnl Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(Libmb, 1.0)
+AC_INIT(Libmb, 0.10)
+
+VERSION=0.10
+
+AC_ENABLE_SHARED
+AC_DISABLE_STATIC
+LT_INIT
 
 AM_CONFIG_HEADER(config.h)
 
