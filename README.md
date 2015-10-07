@@ -28,4 +28,4 @@ the examples it's necessary to change those paths.
 ##Dependencies
 This library depends on the [GStreamer 1.x] (http://gstreamer.freedesktop.org/) and [GLib] (https://developer.gnome.org/glib/stable/).
 
-This is a project under development. Feel free to contribute.
+This is an ongoing project. Feel free to contribute.
