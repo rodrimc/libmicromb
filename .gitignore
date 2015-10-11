@@ -9,6 +9,10 @@
 *.pch
 
 # Libraries
+ltmain.sh
+libtool
+.deps/
+.libs/
 *.lib
 *.a
 *.la
@@ -29,6 +33,7 @@
 *.hex
 
 # http://www.gnu.org/software/automake
+Makefile
 Makefile.in
 
 # http://www.gnu.org/software/autoconf
@@ -40,3 +45,6 @@ Makefile.in
 /install-sh
 /missing
 /stamp-h1
+/m4
+config.*
+.dirstamp
