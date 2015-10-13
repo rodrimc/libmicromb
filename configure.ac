@@ -18,14 +18,9 @@ AC_CONFIG_MACRO_DIR([m4])
 
 AC_PROG_CC
 
-link_tests=
-AC_ARG_ENABLE([link_tests],
-              [  --enable-link-tests     link tests with libmicromb.so],
-              [case "${enableval}" in
-               yes) link_tests=true ;;
-               no)  link_tests=false ;;
-               *) AC_MSG_ERROR([bad value ${enableval} for --enable-link-tests]) ;;
-             esac],[link_tests=true])
+AC_ARG_ENABLE([tests_linking],
+              AS_HELP_STRING([--disable-tests-linking], [disable linking tests with libmicromb.so]),
+             [link_tests=false],[link_tests=true])
 AM_CONDITIONAL([LINK_TESTS],[test x$link_tests = xtrue])
 
 PKG_CHECK_MODULES([GSTREAMER], [gstreamer-1.0], [],
