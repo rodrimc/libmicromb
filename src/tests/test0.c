@@ -29,29 +29,30 @@ int n, count = 0;
 GMainLoop *loop;
 MbMedia *medias[2];
 
-void handler (MbMediaEvent *evt)
+void handler (MbEvent *evt)
 {
-	switch (evt->evt)
+	switch (evt->type)
 	{
 		case MB_BEGIN:
 		{
-			g_print ("%s has started.\n", evt->media->name);
+			g_print ("%s has started.\n", evt->state_change.media->name);
 			break;
 		}
 		case MB_PAUSE:
 		{
-			g_print ("%s has paused.\n", evt->media->name);
+			g_print ("%s has paused.\n", evt->state_change.media->name);
 			break;
 		}
 		case MB_END:
 		{
-			g_print ("%s has ended.\n", evt->media->name);
+			g_print ("%s has ended.\n", evt->state_change.media->name);
 
 			break;
 		}
 		case MB_REMOVED:
 		{
-			g_print ("%s has been removed from pipeline.\n", evt->media->name);
+			g_print ("%s has been removed from pipeline.\n", 
+          evt->state_change.media->name);
 
 			count++;
 			if (count == n)
