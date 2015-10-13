@@ -1,18 +1,29 @@
 /*
- ============================================================================
- Name        : Libmb_tests.c
- Author      : Rodrigo Costa
- Version     :
- Copyright   : GPL
- Description : Hello World in C, Ansi-style
- ============================================================================
- */
+*
+*  Copyright (C) 2015 "Rodrigo Costa" <rodrigocosta@telemidia.puc-rio.br>
+* 
+*  This file is part of Libmicromb.
+*
+*  Libmicromb is free software: you can redistribute it and/or modify
+*  it under the terms of the GNU General Public License as published by
+*  the Free Software Foundation, either version 3 of the License, or
+*  (at your option) any later version.
+*
+*  Libmicromb is distributed in the hope that it will be useful,
+*  but WITHOUT ANY WARRANTY; without even the implied warranty of
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*  GNU General Public License for more details.
+*
+*  You should have received a copy of the GNU General Public License
+*  along with Libmicromb.  If not, see <http://www.gnu.org/licenses/>.
+*
+*/
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "mb/mb.h"
+#include "mb.h"
 
 int n, count = 0;
 GMainLoop *loop;
@@ -89,18 +100,18 @@ int main (int argc, char *argv[])
 
   n = argc - 1;
 
-  background = mb_media_new ("background", "file:////media/rodrigocosta/Data/"
+  background = mb_media_new ("background", "file:////media/rodrigocosta/Dados/"
 														 "primeirojoao/media/background.png", 0, 0, 0,
 														 width, height);
 
-  anim = mb_media_new ("animation", "file:////media/rodrigocosta/Data/"
+  anim = mb_media_new ("animation", "file:////media/rodrigocosta/Dados/"
 											 "primeirojoao/media/animGar.mp4", 0, 0, 1,
 											 width, height);
 
-  choro = mb_media_new ("choro", "file:////media/rodrigocosta/Data/"
+  choro = mb_media_new ("choro", "file:////media/rodrigocosta/Dados/"
 												 "primeirojoao/media/choro.mp4", 0, 0, 0, 0, 0);
 
-  drible = mb_media_new ("drible", "file:////media/rodrigocosta/Data/"
+  drible = mb_media_new ("drible", "file:////media/rodrigocosta/Dados/"
 												 "primeirojoao/media/drible.mp4",
 												 width * 0.05 /* left=5% */,
 												 height * 0.067 /* top=6.7% */,
@@ -108,7 +119,7 @@ int main (int argc, char *argv[])
 												 width * 0.185 /* width=18.5% */,
 												 height * 0.185 /* height=18.5% */);
 
-  shoes = mb_media_new ("shoes", "file:////media/rodrigocosta/Data/"
+  shoes = mb_media_new ("shoes", "file:////media/rodrigocosta/Dados/"
 												 "primeirojoao/media/shoes.mp4",
 												 width * 0.15 /* left=15% */,
 												 height * 0.60 /* top=60% */,
