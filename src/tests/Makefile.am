@@ -5,16 +5,25 @@ bin_PROGRAMS = garrincha \
                test3 \
                test4 
 
+MB_SOURCES=
+
+if LINK_TESTS
 MICROMB_CFLAGS = -I$(includedir)/micromb-0.10/
+MICROMB_LDFLAGS = -lmicromb
+else
+MICROMB_CFLAGS = -I../mb/
+MICROMB_LDFLAGS = 
 
-MICROMB_LDFLAGS =  -lmicromb
+MB_SOURCES+= ../mb/mb.c\
+					   ../mb/util.c
+endif
 
-garrincha_SOURCES = garrincha.c 
-test0_SOURCES = test0.c 
-test1_SOURCES = test1.c
-test2_SOURCES = test2.c
-test3_SOURCES = test3.c
-test4_SOURCES = test4.c
+garrincha_SOURCES = garrincha.c $(MB_SOURCES)
+test0_SOURCES = test0.c $(MB_SOURCES)
+test1_SOURCES = test1.c $(MB_SOURCES)
+test2_SOURCES = test2.c $(MB_SOURCES)
+test3_SOURCES = test3.c $(MB_SOURCES)
+test4_SOURCES = test4.c $(MB_SOURCES)
 				
 garrincha_CFLAGS = $(GSTREAMER_CFLAGS) $(MICROMB_CFLAGS)
 garrincha_LDADD = $(GSTREAMER_LIBS) $(MICROMB_LDFLAGS)
