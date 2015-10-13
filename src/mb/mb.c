@@ -97,7 +97,7 @@ mb_media_start (MbMedia *media)
 {
 	GstStateChange ret;
 	GstState current_state;
-  MbStateChangeEvent *event;
+  MbEvent *event;
 
 	g_assert (media != NULL);
 
