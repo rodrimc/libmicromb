@@ -58,6 +58,11 @@ has_image_extension (const char *uri);
 void
 notify_handler (MbEvent evt, MbMedia *media);
 
+gboolean
+set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad);
+
+gboolean
+set_audio_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad); 
 //callbacks
 void
 pad_added_cb (GstElement *src, GstPad *new_pad, MbMedia *media);
