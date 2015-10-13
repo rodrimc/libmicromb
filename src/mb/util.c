@@ -55,12 +55,13 @@ bus_cb (GstBus *bus, GstMessage *message, gpointer data)
     	{
     		case APP_EVT_MEDIA_END:
     		{
+          MbEvent *event;
 					if (gst_structure_has_field(msg_struct, "data"))
 					{
 						MbMedia *media = NULL;
 						GstElement *bin = NULL, *element = NULL;
 						GstIterator *bin_it = NULL;
-						GValue data = G_VALUE_INIT;
+            GValue data = G_VALUE_INIT;
 						gboolean done = FALSE;
 
 						gst_structure_get (msg_struct, "data", G_TYPE_POINTER, &media,
@@ -103,8 +104,10 @@ bus_cb (GstBus *bus, GstMessage *message, gpointer data)
 						gst_iterator_free(bin_it);
 						gst_object_unref(bin);
 
-						notify_handler(MB_REMOVED, media);
-					}
+            event = create_state_change_event (MB_REMOVED, media);
+						notify_handler(event);
+					  free (event);
+          }
 					break;
     		}
     	}
@@ -656,7 +659,9 @@ eos_event_cb (GstPad *pad, GstPadProbeInfo *info, gpointer data)
 
 		if (pads == 0)
 		{
-			notify_handler (MB_END, media);
+      MbEvent *event = create_state_change_event (MB_END, media);
+			notify_handler (event);
+      free (event);
 
 			msg_struct = gst_structure_new ("end-media", "event_type", G_TYPE_INT,
 																			APP_EVT_MEDIA_END, "data", G_TYPE_POINTER,
@@ -696,15 +701,26 @@ stop_pad_cb (GstPad *pad, GstPadProbeInfo *info, gpointer data)
 	return GST_PAD_PROBE_OK;
 }
 
+MbEvent *
+create_state_change_event (MbEventType type, MbMedia *media)
+{
+  MbStateChangeEvent state_change;
+  MbEvent *e = (MbEvent *) malloc (sizeof (MbEvent));
+  assert (e);
+  
+  state_change.type = type;
+  state_change.media = media;
+
+  e->state_change = state_change;
+
+  return e;
+}
+
 void
-notify_handler (MbEvent evt, MbMedia *media)
+notify_handler (MbEvent* evt)
 {
 	if (_global.evt_handler != NULL)
 	{
-		MbMediaEvent event;
-		event.evt = evt;
-		event.media = media;
-
-		_global.evt_handler(&event);
+		_global.evt_handler(evt);
 	}
 }

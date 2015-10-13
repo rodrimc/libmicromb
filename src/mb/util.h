@@ -23,6 +23,7 @@
 #define UTIL_H_
 
 #include <gst/gst.h>
+#include <assert.h>
 #include "mb.h"
 
 typedef enum
@@ -57,7 +58,7 @@ typedef struct
 	GThread *loop_thread;
 
 	//handlers
-	void (*evt_handler)(MbMediaEvent*);
+	void (*evt_handler)(MbEvent*);
 } MbData;
 
 MbData _global;
@@ -69,7 +70,11 @@ gboolean
 has_image_extension (const char *uri);
 
 void
-notify_handler (MbEvent evt, MbMedia *media);
+notify_handler (MbEvent *event);
+
+MbEvent *
+create_state_change_event (MbEventType, MbMedia *); //The MbEvent* should be
+                                                    //freed by the caller
 
 //helpers
 gboolean

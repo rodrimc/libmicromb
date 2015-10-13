@@ -97,6 +97,7 @@ mb_media_start (MbMedia *media)
 {
 	GstStateChange ret;
 	GstState current_state;
+  MbStateChangeEvent *event;
 
 	g_assert (media != NULL);
 
@@ -117,7 +118,11 @@ mb_media_start (MbMedia *media)
 	g_print ("'%s' state: %s.\n", media->name,
 					 gst_element_state_get_name(current_state));
 
-	notify_handler(MB_BEGIN, media);
+  event = create_state_change_event (MB_BEGIN, media);
+
+	notify_handler(event);
+
+  free (event);
 
 	return TRUE;
 }
@@ -386,7 +391,7 @@ mb_media_set_alpha (MbMedia *media, double alpha)
 }
 
 void
-mb_register_handler (void (*handler)(MbMediaEvent*))
+mb_register_handler (void (*handler)(MbEvent*))
 {
 	if (handler != NULL)
 		_global.evt_handler = handler;

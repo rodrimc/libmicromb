@@ -64,26 +64,7 @@ typedef struct
 	gint valid_pads;
 } MbMedia; /*!< Representation of media objects to clients of this library*/
 
-typedef enum
-{
-	/* FILL ME*/
-
-	//Presentation
-	MB_END,
-	MB_PAUSE,
-	MB_BEGIN,
-
-	//Application
-	MB_REMOVED
-
-} MbEvent;
-
-typedef struct
-{
-	MbEvent evt;
-	MbMedia *media;
-} MbMediaEvent;
-
+#include "events.h"
 
 /*!
  * \brief	Initializes the library.
@@ -221,7 +202,7 @@ mb_get_window_width ();
  * 	@param handler Function handler.
  */
 void
-mb_register_handler (void (*)(MbMediaEvent *));
+mb_register_handler (void (*)(MbEvent *));
 
 /*!
  * \brief Unregister the handler
