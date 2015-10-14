@@ -83,7 +83,7 @@ mb_init ();
  *	@return TRUE if the library was properly initialized or FALSE otherwise.
  */
 gboolean
-mb_init_args (int width, int height);
+mb_init_args (int width, int height, gboolean sync);
 
 
 /*!
@@ -210,7 +210,6 @@ mb_register_handler (void (*)(MbEvent *));
  */
 void
 mb_unregister_handler ();
-
 
 GstBus *
 mb_get_message_bus ();

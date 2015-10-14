@@ -32,7 +32,7 @@ typedef enum
 	/* FILL ME */
 }AppEventType;
 
-typedef struct
+typedef struct MbData
 {
 	//pipeline
 	GstElement *pipeline;
@@ -57,14 +57,19 @@ typedef struct
 	GMainLoop *loop; //It is needed to handle messages coming from the bus.
 	GThread *loop_thread;
 
-	//handlers
+  //internal variables
+	GMutex mutex;
+  gboolean sync;
+  gboolean initialized;
+
+  //handlers
 	void (*evt_handler)(MbEvent*);
 } MbData;
 
-MbData _global;
+MbData _mb_global_data;
 
 gboolean
-init (int width, int height);
+init (int width, int height, gboolean sync);
 
 gboolean
 has_image_extension (const char *uri);
@@ -72,9 +77,14 @@ has_image_extension (const char *uri);
 void
 notify_handler (MbEvent *event);
 
+
+//The callers of functions that return MbEvent * should freed
+//the pointer returned
 MbEvent *
-create_state_change_event (MbEventType, MbMedia *); //The MbEvent* should be
-                                                    //freed by the caller
+create_state_change_event (MbEventType, const char *); 
+
+MbEvent *
+create_app_event (MbEventType);
 
 //helpers
 gboolean

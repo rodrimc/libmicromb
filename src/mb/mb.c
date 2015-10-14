@@ -32,13 +32,13 @@
 int
 mb_init ()
 {
-	return init (DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
+	return init (DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, TRUE);
 }
 
 int
-mb_init_args (int width, int height)
+mb_init_args (int width, int height, gboolean sync)
 {
-	return init (width, height);
+	return init (width, height, sync);
 }
 
 MbMedia *
@@ -47,8 +47,8 @@ mb_media_new (const char *media_name, const char *uri,
 {
 	size_t lenght;
 	MbMedia *media;
-
-	media = (MbMedia *) malloc (sizeof (MbMedia));
+	
+  media = (MbMedia *) malloc (sizeof (MbMedia));
 
 	g_mutex_init (&(media->mutex));
 
@@ -63,7 +63,6 @@ mb_media_new (const char *media_name, const char *uri,
 	media->audio_converter = NULL;
 	media->audio_resampler = NULL;
 	media->audio_filter = NULL;
-
 
 	lenght = strlen(media_name);
 	media->name = (char *) malloc ((lenght + 1)  * sizeof (char));
@@ -83,7 +82,7 @@ mb_media_new (const char *media_name, const char *uri,
 	media->alpha = 1.0;
 	media->volume = 1.0;
 
-	g_object_set (media->decoder, "uri", uri, NULL);
+	g_object_set (G_OBJECT (media->decoder), "uri", uri, NULL);
 	g_signal_connect (G_OBJECT(media->decoder), "pad-added",
 										G_CALLBACK (pad_added_cb), media);
 
@@ -101,30 +100,25 @@ mb_media_start (MbMedia *media)
 
 	g_assert (media != NULL);
 
-	gst_bin_add (GST_BIN(_global.pipeline), media->bin);
+	gst_bin_add (GST_BIN(_mb_global_data.pipeline), media->bin);
 
-	media->start_offset = gst_clock_get_time(_global.clock_provider);
+	media->start_offset = gst_clock_get_time(_mb_global_data.clock_provider);
 
 	gst_element_set_state (media->bin, GST_STATE_PLAYING);
-	do
-	{
-		ret = gst_element_get_state (media->bin, &current_state,
-																 NULL, GST_CLOCK_TIME_NONE);
-		if (ret == GST_STATE_CHANGE_FAILURE)
-			return FALSE;
+  
+  if (_mb_global_data.sync == TRUE)
+  {
+    do
+    {
+      ret = gst_element_get_state (media->bin, &current_state,
+          NULL, GST_CLOCK_TIME_NONE);
+      if (ret == GST_STATE_CHANGE_FAILURE)
+        return FALSE;
 
-	} while (current_state != GST_STATE_PLAYING);
-
-	g_print ("'%s' state: %s.\n", media->name,
-					 gst_element_state_get_name(current_state));
-
-  event = create_state_change_event (MB_BEGIN, media);
-
-	notify_handler(event);
-
-  free (event);
-
-	return TRUE;
+    } while (current_state != GST_STATE_PLAYING);
+  }
+	
+  return TRUE;
 }
 
 gboolean
@@ -173,10 +167,10 @@ mb_media_stop (MbMedia *media)
 GstBus *
 mb_get_message_bus ()
 {
-	if (_global.bus == NULL)
-		_global.bus = gst_element_get_bus (_global.pipeline);
+	if (_mb_global_data.bus == NULL)
+		_mb_global_data.bus = gst_element_get_bus (_mb_global_data.pipeline);
 
-	return _global.bus;
+	return _mb_global_data.bus;
 }
 
 gboolean
@@ -275,7 +269,7 @@ mb_media_set_pos (MbMedia *media, int x, int y)
 		int x_pos, y_pos;
 
 		video_mixer_pad =
-				gst_element_get_static_pad (_global.video_mixer, media->video_pad_name);
+				gst_element_get_static_pad (_mb_global_data.video_mixer, media->video_pad_name);
 		g_assert(video_mixer_pad);
 
 		g_object_set (video_mixer_pad, "xpos", x, NULL);
@@ -322,7 +316,7 @@ mb_media_set_z (MbMedia *media, int z)
 		int zorder;
 
 		video_mixer_pad =
-				gst_element_get_static_pad (_global.video_mixer, media->video_pad_name);
+				gst_element_get_static_pad (_mb_global_data.video_mixer, media->video_pad_name);
 		g_assert(video_mixer_pad);
 
 		g_object_set (video_mixer_pad, "zorder", z, NULL);
@@ -368,7 +362,7 @@ mb_media_set_alpha (MbMedia *media, double alpha)
 		double alpha_channel;
 
 		video_mixer_pad =
-				gst_element_get_static_pad (_global.video_mixer, media->video_pad_name);
+				gst_element_get_static_pad (_mb_global_data.video_mixer, media->video_pad_name);
 		g_assert(video_mixer_pad);
 
 		g_object_set (video_mixer_pad, "alpha", alpha, NULL);
@@ -394,25 +388,25 @@ void
 mb_register_handler (void (*handler)(MbEvent*))
 {
 	if (handler != NULL)
-		_global.evt_handler = handler;
+		_mb_global_data.evt_handler = handler;
 }
 
 void
 mb_unregister_handler ()
 {
-	_global.evt_handler = NULL;
+	_mb_global_data.evt_handler = NULL;
 }
 
 int
 mb_get_window_height ()
 {
-	return _global.window_height;
+	return _mb_global_data.window_height;
 }
 
 int
 mb_get_window_width ()
 {
-	return _global.window_width;
+	return _mb_global_data.window_width;
 }
 
 void
@@ -471,22 +465,22 @@ mb_media_free (MbMedia *media)
 void
 mb_clean_up ()
 {
-	if (_global.bus != NULL)
-		gst_object_unref(_global.bus);
+	if (_mb_global_data.bus != NULL)
+		gst_object_unref(_mb_global_data.bus);
 
-	if (_global.pipeline != NULL)
+	if (_mb_global_data.pipeline != NULL)
 	{
-		gst_object_unref(_global.clock_provider);
+		gst_object_unref(_mb_global_data.clock_provider);
 
-		gst_element_set_state(_global.pipeline, GST_STATE_NULL);
-		gst_object_unref(_global.pipeline);
+		gst_element_set_state(_mb_global_data.pipeline, GST_STATE_NULL);
+		gst_object_unref(_mb_global_data.pipeline);
 	}
 
-	if (_global.loop != NULL)
+	if (_mb_global_data.loop != NULL)
 	{
-		g_main_loop_quit(_global.loop);
-		g_main_loop_unref(_global.loop);
-		g_thread_unref(_global.loop_thread);
+		g_main_loop_quit(_mb_global_data.loop);
+		g_main_loop_unref(_mb_global_data.loop);
+		g_thread_unref(_mb_global_data.loop_thread);
 	}
 
 	gst_deinit();

@@ -32,16 +32,45 @@ bus_cb (GstBus *bus, GstMessage *message, gpointer data)
 
   switch (GST_MESSAGE_TYPE (message))
   {
-    case GST_MESSAGE_ERROR:
+    case GST_MESSAGE_STATE_CHANGED:
     {
-      GError *err;
-      gchar *debug;
+      GstState old_state, new_state;
+      gst_message_parse_state_changed (message, &old_state, &new_state, NULL);
+      if (new_state == GST_STATE_PLAYING)
+      {
+        GstElement *source = (GstElement *) message->src;
+        if (source == _mb_global_data.pipeline)
+        {
+          g_mutex_lock (&(_mb_global_data.mutex));
+          if (_mb_global_data.initialized == FALSE)
+          {
+            MbEvent *event;
+            if (_mb_global_data.clock_provider == NULL)
+              _mb_global_data.clock_provider = 
+                gst_element_get_clock(_mb_global_data.pipeline);
 
-      gst_message_parse_error (message, &err, &debug);
-      g_print ("Error: %s\n", err->message);
-      g_error_free (err);
-      g_free (debug);
+            _mb_global_data.initialized = TRUE;
 
+            event = create_app_event (MB_APP_INIT_DONE);
+            notify_handler (event);
+            free (event);
+          }
+          g_mutex_unlock (&(_mb_global_data.mutex));
+        }
+        else
+        {
+          if (strcmp (G_OBJECT_TYPE_NAME(G_OBJECT (source)), "GstBin") == 0)
+          {
+            MbEvent *event;
+            
+            event = create_state_change_event (MB_BEGIN, 
+                GST_ELEMENT_NAME (source));
+            notify_handler (event);
+
+            free (event);
+          }
+        }
+      }
       break;
     }
     case GST_MESSAGE_APPLICATION:
@@ -68,11 +97,12 @@ bus_cb (GstBus *bus, GstMessage *message, gpointer data)
 															 NULL);
 						g_assert (media);
 
-						bin = gst_bin_get_by_name(GST_BIN(_global.pipeline), media->name);
+						bin = gst_bin_get_by_name(GST_BIN(_mb_global_data.pipeline), 
+                media->name);
 						g_assert (bin);
 
 						gst_element_set_state(bin, GST_STATE_NULL);
-						gst_bin_remove (GST_BIN (_global.pipeline), bin);
+						gst_bin_remove (GST_BIN (_mb_global_data.pipeline), bin);
 
 						bin_it = gst_bin_iterate_elements(GST_BIN(bin));
 						while (!done)
@@ -104,7 +134,7 @@ bus_cb (GstBus *bus, GstMessage *message, gpointer data)
 						gst_iterator_free(bin_it);
 						gst_object_unref(bin);
 
-            event = create_state_change_event (MB_REMOVED, media);
+            event = create_state_change_event (MB_REMOVED, media->name);
 						notify_handler(event);
 					  free (event);
           }
@@ -113,6 +143,18 @@ bus_cb (GstBus *bus, GstMessage *message, gpointer data)
     	}
 
     	break;
+    }
+    case GST_MESSAGE_ERROR:
+    {
+      GError *err;
+      gchar *debug;
+
+      gst_message_parse_error (message, &err, &debug);
+      g_print ("Error: %s\n", err->message);
+      g_error_free (err);
+      g_free (debug);
+
+      break;
     }
     case GST_MESSAGE_EOS:
     {
@@ -129,8 +171,8 @@ bus_cb (GstBus *bus, GstMessage *message, gpointer data)
 static void
 main_loop_thread  ()
 {
-	_global.loop = g_main_loop_new (NULL, FALSE);
-	g_main_loop_run (_global.loop);
+	_mb_global_data.loop = g_main_loop_new (NULL, FALSE);
+	g_main_loop_run (_mb_global_data.loop);
 	g_thread_exit (0);
 }
 
@@ -174,8 +216,8 @@ set_background ()
 													"video/x-raw",
 													"framerate", GST_TYPE_FRACTION, 25, 1,
 													"pixel-aspect-ratio", GST_TYPE_FRACTION, 1, 1,
-													"width", G_TYPE_INT, _global.window_width,
-													"height", G_TYPE_INT, _global.window_height,
+													"width", G_TYPE_INT, _mb_global_data.window_width,
+													"height", G_TYPE_INT, _mb_global_data.window_height,
 													NULL);
 	g_assert (caps);
 
@@ -199,14 +241,13 @@ set_background ()
 
 	g_object_set (G_OBJECT (audio_src), "wave", /*silence*/ 4, NULL);
 
-  caps = gst_caps_from_string
-        (audio_caps);
+  caps = gst_caps_from_string (audio_caps);
   g_assert (caps);
   g_object_set (audio_capsfilter, "caps", caps, NULL);
 
 	gst_caps_unref(caps);
 
-	gst_bin_add_many(GST_BIN(_global.pipeline), bg_src, bg_scaler,
+	gst_bin_add_many(GST_BIN(_mb_global_data.pipeline), bg_src, bg_scaler,
 									 bg_capsfilter, audio_src, audio_conv, audio_resample,
 									 audio_capsfilter, NULL);
 
@@ -230,7 +271,7 @@ set_background ()
 		src_pad = gst_element_get_static_pad(bg_capsfilter, "src");
 		g_assert (src_pad);
 
-		mixer_sink_pad = gst_element_get_request_pad(_global.video_mixer,
+		mixer_sink_pad = gst_element_get_request_pad(_mb_global_data.video_mixer,
 																								 "sink_%u");
 		g_assert (mixer_sink_pad);
 
@@ -251,7 +292,7 @@ set_background ()
 		src_pad = gst_element_get_static_pad(audio_capsfilter, "src");
 		g_assert (src_pad);
 
-		mixer_sink_pad = gst_element_get_request_pad(_global.audio_mixer,
+		mixer_sink_pad = gst_element_get_request_pad(_mb_global_data.audio_mixer,
 																								 "sink_%u");
 		g_assert (mixer_sink_pad);
 
@@ -267,9 +308,7 @@ set_background ()
 		audio_caps_structure = gst_caps_get_structure (audio_caps, 0);
 		name = gst_structure_get_name (audio_caps_structure);
 		if (gst_structure_has_field(audio_caps_structure, "rate"))
-		{
 			gst_structure_get_int(audio_caps_structure, "rate", &rate);
-		}
 
 		gst_caps_unref(audio_caps);
 		gst_object_unref (src_pad);
@@ -278,7 +317,7 @@ set_background ()
 }
 
 int
-init (int width, int height)
+init (int width, int height, gboolean sync)
 {
 	GstStateChangeReturn ret;
 	GstState current_state;
@@ -289,72 +328,81 @@ init (int width, int height)
 		return FALSE;
 	}
 
-	_global.pipeline = gst_pipeline_new ("pipeline");
-	g_assert (_global.pipeline);
+	_mb_global_data.pipeline = gst_pipeline_new ("pipeline");
+	g_assert (_mb_global_data.pipeline);
 
-	_global.video_mixer 		= NULL;
-	_global.audio_mixer 		= NULL;
-	_global.video_sink  		= NULL;
-	_global.audio_sink  		= NULL;
-	_global.clock_provider	= NULL;
-	_global.evt_handler			= NULL;
-	_global.loop						= NULL;
-	_global.bus							= NULL;
-	_global.window_width 		= width;
-	_global.window_height 	= height;
+	g_mutex_init (&(_mb_global_data.mutex));
+
+	_mb_global_data.video_mixer 		= NULL;
+	_mb_global_data.audio_mixer 		= NULL;
+	_mb_global_data.video_sink  		= NULL;
+	_mb_global_data.audio_sink  		= NULL;
+	_mb_global_data.clock_provider	= NULL;
+	_mb_global_data.loop						= NULL;
+	_mb_global_data.bus							= NULL;
+	_mb_global_data.window_width 		= width;
+	_mb_global_data.window_height 	= height;
+  _mb_global_data.initialized     = FALSE;
+  _mb_global_data.sync            = sync;
 
 	//video
-	_global.video_mixer = gst_element_factory_make("videomixer", NULL);
-	g_assert(_global.video_mixer);
+	_mb_global_data.video_mixer = gst_element_factory_make("videomixer", NULL);
+	g_assert(_mb_global_data.video_mixer);
 
-	_global.video_sink = gst_element_factory_make("xvimagesink", NULL);
-	g_assert (_global.video_sink);
+	_mb_global_data.video_sink = gst_element_factory_make("xvimagesink", NULL);
+	g_assert (_mb_global_data.video_sink);
 
 	//audio
-	_global.audio_mixer = gst_element_factory_make("adder", NULL);
-	g_assert(_global.audio_mixer);
+	_mb_global_data.audio_mixer = gst_element_factory_make("adder", NULL);
+	g_assert(_mb_global_data.audio_mixer);
 
-	_global.audio_sink = gst_element_factory_make("autoaudiosink", NULL);
-	g_assert (_global.audio_sink);
+	_mb_global_data.audio_sink = gst_element_factory_make("autoaudiosink", NULL);
+	g_assert (_mb_global_data.audio_sink);
 
-	gst_bin_add_many(GST_BIN (_global.pipeline),
-									 _global.video_mixer, _global.video_sink,
-									 _global.audio_mixer, _global.audio_sink,
+	gst_bin_add_many(GST_BIN (_mb_global_data.pipeline),
+									 _mb_global_data.video_mixer, _mb_global_data.video_sink,
+									 _mb_global_data.audio_mixer, _mb_global_data.audio_sink,
 									 NULL);
 
-	if (!gst_element_link(_global.video_mixer, _global.video_sink))
+	if (!gst_element_link(_mb_global_data.video_mixer,
+        _mb_global_data.video_sink))
 	{
 		g_printerr ("Could not link video mixer and sink together.\n");
 		mb_clean_up ();
 		return FALSE;
 	}
 
-	if (!gst_element_link(_global.audio_mixer, _global.audio_sink))
+	if (!gst_element_link(_mb_global_data.audio_mixer, 
+        _mb_global_data.audio_sink))
 	{
 		g_printerr ("Could not link audio mixer and sink together.\n");
 		mb_clean_up ();
 		return FALSE;
 	}
+	
+  gst_bus_add_watch (mb_get_message_bus (), bus_cb, NULL);
 
 	set_background();
 
-	gst_element_set_state (_global.pipeline, GST_STATE_PLAYING);
+	gst_element_set_state (_mb_global_data.pipeline, GST_STATE_PLAYING);
 
-	//The following is necessary because the 'gst_element_set_state'
-	//can return GST_STATE_CHANGE_ASYNC. In this case, the function
-	//'gst_element_get_state' blocks until the state has effectively changed.
-	do
-	{
-		ret = gst_element_get_state (_global.pipeline, &current_state,
-																 NULL, GST_CLOCK_TIME_NONE);
-		if (ret == GST_STATE_CHANGE_FAILURE)
-		{
-			mb_clean_up ();
-			return FALSE;
-		}
-	} while (current_state != GST_STATE_PLAYING);
+  if (_mb_global_data.sync == TRUE)
+  {
+    do
+    {
+      ret = gst_element_get_state (_mb_global_data.pipeline, &current_state,
+          NULL, GST_CLOCK_TIME_NONE);
+      if (ret == GST_STATE_CHANGE_FAILURE)
+      {
+        mb_clean_up ();
+        return FALSE;
+      }
+    } while (current_state != GST_STATE_PLAYING);
+    _mb_global_data.clock_provider = gst_element_get_clock(
+                                                     _mb_global_data.pipeline);
+  }
 
-	if ((_global.loop_thread = g_thread_new ("bus_thread",
+	if ((_mb_global_data.loop_thread = g_thread_new ("bus_thread",
 																					 (GThreadFunc) main_loop_thread,
 																					 NULL)) == NULL)
 	{
@@ -362,9 +410,7 @@ init (int width, int height)
 		mb_clean_up();
 		return FALSE;
 	}
-	gst_bus_add_watch (mb_get_message_bus (), bus_cb, NULL);
 
-	_global.clock_provider = gst_element_get_clock(_global.pipeline);
 
 	return TRUE;
 }
@@ -399,7 +445,7 @@ pad_added_cb (GstElement *src, GstPad *new_pad, MbMedia *media)
 		success = set_video_bin (media->bin, media, new_pad);
 
 		if (success)
-			peer = gst_element_get_static_pad(_global.video_mixer,
+			peer = gst_element_get_static_pad(_mb_global_data.video_mixer,
 																				media->video_pad_name);
 	}
 	else if (g_str_has_prefix(new_pad_type, "audio"))
@@ -407,7 +453,7 @@ pad_added_cb (GstElement *src, GstPad *new_pad, MbMedia *media)
 		success = set_audio_bin (media->bin, media, new_pad);
 
 		if (success)
-			peer = gst_element_get_static_pad(_global.audio_mixer,
+			peer = gst_element_get_static_pad(_mb_global_data.audio_mixer,
 																					media->audio_pad_name);
 	}
 
@@ -506,7 +552,7 @@ set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 	gst_pad_set_active (ghost_pad, TRUE);
 	gst_element_add_pad (bin, ghost_pad);
 
-	output_sink_pad = gst_element_get_request_pad(_global.video_mixer,
+	output_sink_pad = gst_element_get_request_pad(_mb_global_data.video_mixer,
 																								 "sink_%u");
 	g_assert (output_sink_pad);
 
@@ -611,7 +657,7 @@ set_audio_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 			gst_pad_set_active (ghost_pad, TRUE);
 			gst_element_add_pad (bin, ghost_pad);
 
-			output_sink_pad = gst_element_get_request_pad (_global.audio_mixer,
+			output_sink_pad = gst_element_get_request_pad (_mb_global_data.audio_mixer,
 																										 "sink_%u");
 			g_assert(output_sink_pad);
 
@@ -646,7 +692,7 @@ eos_event_cb (GstPad *pad, GstPadProbeInfo *info, gpointer data)
 
 		media = (MbMedia *) data;
 
-		bin = gst_bin_get_by_name (GST_BIN(_global.pipeline), media->name);
+		bin = gst_bin_get_by_name (GST_BIN(_mb_global_data.pipeline), media->name);
 		g_assert(bin);
 
 		g_mutex_lock (&(media->mutex));
@@ -659,7 +705,7 @@ eos_event_cb (GstPad *pad, GstPadProbeInfo *info, gpointer data)
 
 		if (pads == 0)
 		{
-      MbEvent *event = create_state_change_event (MB_END, media);
+      MbEvent *event = create_state_change_event (MB_END, media->name);
 			notify_handler (event);
       free (event);
 
@@ -671,7 +717,7 @@ eos_event_cb (GstPad *pad, GstPadProbeInfo *info, gpointer data)
 
 			message = gst_message_new_application (GST_OBJECT(bin), msg_struct);
 			g_print ("Posting event\n");
-			gst_bus_post (_global.bus, message);
+			gst_bus_post (_mb_global_data.bus, message);
 		}
 		g_free (uri);
 	}
@@ -702,14 +748,23 @@ stop_pad_cb (GstPad *pad, GstPadProbeInfo *info, gpointer data)
 }
 
 MbEvent *
-create_state_change_event (MbEventType type, MbMedia *media)
+create_app_event (MbEventType type)
+{
+  MbEvent *e = (MbEvent *) malloc (sizeof (MbEvent));
+  assert (e);
+  e->type = type;
+  return e;
+}
+
+MbEvent *
+create_state_change_event (MbEventType type, const char *media_name)
 {
   MbStateChangeEvent state_change;
   MbEvent *e = (MbEvent *) malloc (sizeof (MbEvent));
   assert (e);
   
   state_change.type = type;
-  state_change.media = media;
+  state_change.media_name = media_name;
 
   e->state_change = state_change;
 
@@ -719,8 +774,8 @@ create_state_change_event (MbEventType type, MbMedia *media)
 void
 notify_handler (MbEvent* evt)
 {
-	if (_global.evt_handler != NULL)
+	if (_mb_global_data.evt_handler != NULL)
 	{
-		_global.evt_handler(evt);
+		_mb_global_data.evt_handler(evt);
 	}
 }

@@ -46,7 +46,7 @@ typedef struct MbStateChangeEvent
 {
   uint32_t type;
  
-  MbMedia *media;
+  const char *media_name;
 
 } MbStateChangeEvent;
 
