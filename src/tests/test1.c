@@ -27,16 +27,13 @@
 
 int n, count = 0;
 
-
-
-
 int main (int argc, char *argv[])
 {
 	MbMedia *medias[3];
-	//GMainLoop *loop;
+  GMainLoop *loop;
   int i;
 
-  if (!mb_init_args (400, 80))
+  if (!mb_init_args (400, 80, TRUE))
    	return -1;
 
 //  loop = g_main_loop_new (NULL, FALSE);

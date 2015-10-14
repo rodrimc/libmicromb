@@ -35,27 +35,35 @@ void handler (MbEvent *evt)
 	{
 		case MB_BEGIN:
 		{
-			g_print ("%s has started.\n", evt->state_change.media->name);
+			g_print ("%s has started.\n", evt->state_change.media_name);
 			break;
 		}
 		case MB_PAUSE:
 		{
-			g_print ("%s has paused.\n", evt->state_change.media->name);
+			g_print ("%s has paused.\n", evt->state_change.media_name);
 			break;
 		}
 		case MB_END:
 		{
-			g_print ("%s has ended.\n", evt->state_change.media->name);
-			if (evt->state_change.media == medias[0])
+			g_print ("%s has ended.\n", evt->state_change.media_name);
+			if (evt->state_change.media_name == medias[0]->name)
 				mb_media_start(medias[1]);
-			else if (evt->state_change.media == medias[1])
+			else if (evt->state_change.media_name == medias[1]->name)
 				mb_media_start(medias[2]);
 			break;
 		}
 		case MB_REMOVED:
 		{
-			g_print ("%s has been removed from pipeline.\n", evt->state_change.media->name);
-			mb_media_free(evt->state_change.media);
+      int i;
+			g_print ("%s has been removed from pipeline.\n", 
+          evt->state_change.media_name);
+
+      for (i = 0; i < 4; i++)
+        if (medias[i]->name == evt->state_change.media_name)
+        {
+          mb_media_free(medias[i]);
+          break;
+        }
 
 			count++;
 			if (count == n)
@@ -75,7 +83,7 @@ int main (int argc, char *argv[])
   GstStateChangeReturn ret;
   int width, height, x, i;
 
-  if (!mb_init_args (800, 600))
+  if (!mb_init_args (800, 600, TRUE))
    	return -1;
 
   loop = g_main_loop_new (NULL, FALSE);

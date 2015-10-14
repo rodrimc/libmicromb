@@ -35,23 +35,23 @@ void handler (MbEvent *evt)
 	{
 		case MB_BEGIN:
 		{
-			g_print ("%s has started.\n", evt->state_change.media->name);
+			g_print ("%s has started.\n", evt->state_change.media_name);
 			break;
 		}
 		case MB_PAUSE:
 		{
-			g_print ("%s has paused.\n", evt->state_change.media->name);
+			g_print ("%s has paused.\n", evt->state_change.media_name);
 			break;
 		}
 		case MB_END:
 		{
-			g_print ("%s has ended.\n", evt->state_change.media->name);
+			g_print ("%s has ended.\n", evt->state_change.media_name);
 			break;
 		}
 		case MB_REMOVED:
 		{
 			g_print ("%s has been removed from pipeline.\n", 
-          evt->state_change.media->name);
+          evt->state_change.media_name);
 			count++;
 			if (count == 3)
 				g_main_loop_quit(loop);
@@ -67,7 +67,7 @@ int main (int argc, char *argv[])
 	MbMedia *medias[3];
   int i;
 
-  if (!mb_init_args (400, 80))
+  if (!mb_init_args (400, 80, TRUE))
    	return -1;
 
   mb_register_handler(handler);

@@ -38,27 +38,33 @@ void handler (MbEvent *evt)
 {
 	switch (evt->type)
 	{
+    case MB_APP_INIT_DONE:
+    {
+      g_print ("INIT_DONE received\n");
+      g_main_loop_quit(loop);
+      break;
+    }
 		case MB_BEGIN:
 		{
-			g_print ("%s has started.\n", evt->state_change.media->name);
+			g_print ("%s has started.\n", evt->state_change.media_name);
 			break;
 		}
 		case MB_PAUSE:
 		{
-			g_print ("%s has paused.\n", evt->state_change.media->name);
+			g_print ("%s has paused.\n", evt->state_change.media_name);
 			break;
 		}
 		case MB_END:
 		{
-			g_print ("%s has ended.\n", evt->state_change.media->name);
-			if (evt->state_change.media == shoes)
+			g_print ("%s has ended.\n", evt->state_change.media_name);
+			if (evt->state_change.media_name == shoes->name)
 			{
 				mb_media_set_pos(anim, 0, 0);
 				mb_media_set_size(anim, mb_get_window_width(),
 													mb_get_window_height());
 			}
 
-			if (evt->state_change.media == anim)
+			if (evt->state_change.media_name == anim->name)
 				mb_media_stop(background);
 
 			break;
@@ -67,11 +73,21 @@ void handler (MbEvent *evt)
 		{
 			gboolean quit = FALSE;
 			g_print ("%s has been removed from pipeline.\n", 
-          evt->state_change.media->name);
-			if (evt->state_change.media == background)
-				quit = TRUE;
+          evt->state_change.media_name);
 
-			mb_media_free(evt->state_change.media);
+      if (evt->state_change.media_name == background->name)
+      {
+        mb_media_free (background);
+        quit = TRUE;
+      }
+      else if (evt->state_change.media_name == anim->name)
+        mb_media_free (anim);
+      else if (evt->state_change.media_name == choro->name)
+        mb_media_free (choro);
+      else if (evt->state_change.media_name == drible->name)
+        mb_media_free (drible);
+      else if (evt->state_change.media_name == shoes->name)
+        mb_media_free (shoes);
 
 			if (quit)
 				g_main_loop_quit(loop);
@@ -90,14 +106,15 @@ int main (int argc, char *argv[])
   GstStateChangeReturn ret;
   int width = 800, height = 600;
 
-  if (!mb_init_args (width, height))
-   	return -1;
-
-  n = 5;
-
-  loop = g_main_loop_new (NULL, FALSE);
-
   mb_register_handler(handler);
+  
+  if (!mb_init_args (width, height, FALSE))
+   	return -1;
+  
+  loop = g_main_loop_new (NULL, FALSE);
+	g_main_loop_run (loop);
+  
+  n = 5;
 
   n = argc - 1;
 

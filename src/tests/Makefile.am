@@ -1,9 +1,9 @@
 bin_PROGRAMS = garrincha \
-							 test0 \
-							 test1 \
-               test2 \
-               test3 \
-               test4 
+							test0 \
+							test1 \
+              test2 \
+              test3 \
+              test4 
 
 MB_SOURCES=
 

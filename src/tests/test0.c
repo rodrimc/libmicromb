@@ -35,24 +35,24 @@ void handler (MbEvent *evt)
 	{
 		case MB_BEGIN:
 		{
-			g_print ("%s has started.\n", evt->state_change.media->name);
+			g_print ("%s has started.\n", evt->state_change.media_name);
 			break;
 		}
 		case MB_PAUSE:
 		{
-			g_print ("%s has paused.\n", evt->state_change.media->name);
+			g_print ("%s has paused.\n", evt->state_change.media_name);
 			break;
 		}
 		case MB_END:
 		{
-			g_print ("%s has ended.\n", evt->state_change.media->name);
+			g_print ("%s has ended.\n", evt->state_change.media_name);
 
 			break;
 		}
 		case MB_REMOVED:
 		{
 			g_print ("%s has been removed from pipeline.\n", 
-          evt->state_change.media->name);
+          evt->state_change.media_name);
 
 			count++;
 			if (count == n)
@@ -72,7 +72,7 @@ int main (int argc, char *argv[])
   GstStateChangeReturn ret;
   int width = 800, height = 600, x;
 
-  if (!mb_init_args (800, 600))
+  if (!mb_init_args (800, 600, TRUE))
    	return -1;
 
   loop = g_main_loop_new (NULL, FALSE);
