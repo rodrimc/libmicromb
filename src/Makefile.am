@@ -12,5 +12,6 @@ libmicromb_la_LDFLAGS = -shared -fPIC -rpath,$(LIBDIR) \
 libmicromb_la_LDFLAGS += -version-info 1:1:1
 
 micrombincludedir = $(includedir)/micromb-$(VERSION)
-micrombinclude_HEADERS = mb/mb.h
+micrombinclude_HEADERS = mb/mb.h \
+												 mb/events.h
 
