@@ -94,7 +94,21 @@ void handler (MbEvent *evt)
 
 			break;
 		}
-		default:
+    case MB_MOUSE_BUTTON_PRESS:
+    {
+      g_print ("Mouse button press: %d (button), (%d, %d) (x, y)\n",
+          evt->mouse_button.button, evt->mouse_button.x, 
+          evt->mouse_button.y);
+      break;
+    }
+    case MB_MOUSE_BUTTON_RELEASE:
+    {
+      g_print ("Mouse button release: %d (button), (%d, %d) (x, y)\n",
+          evt->mouse_button.button, evt->mouse_button.x, 
+          evt->mouse_button.y);
+      break;
+    }
+    default:
 			g_printerr ("Unknown event received!\n");
 	}
 }
@@ -118,18 +132,18 @@ int main (int argc, char *argv[])
 
   n = argc - 1;
 
-  background = mb_media_new ("background", "file:////media/rodrigocosta/Data/"
+  background = mb_media_new ("background", "file:////media/rodrigocosta/Dados/"
 														 "primeirojoao/media/background.png", 0, 0, 0,
 														 width, height);
 
-  anim = mb_media_new ("animation", "file:////media/rodrigocosta/Data/"
+  anim = mb_media_new ("animation", "file:////media/rodrigocosta/Dados/"
 											 "primeirojoao/media/animGar.mp4", 0, 0, 1,
 											 width, height);
 
-  choro = mb_media_new ("choro", "file:////media/rodrigocosta/Data/"
+  choro = mb_media_new ("choro", "file:////media/rodrigocosta/Dados/"
 												 "primeirojoao/media/choro.mp4", 0, 0, 0, 0, 0);
 
-  drible = mb_media_new ("drible", "file:////media/rodrigocosta/Data/"
+  drible = mb_media_new ("drible", "file:////media/rodrigocosta/Dados/"
 												 "primeirojoao/media/drible.mp4",
 												 width * 0.05 /* left=5% */,
 												 height * 0.067 /* top=6.7% */,
@@ -137,7 +151,7 @@ int main (int argc, char *argv[])
 												 width * 0.185 /* width=18.5% */,
 												 height * 0.185 /* height=18.5% */);
 
-  shoes = mb_media_new ("shoes", "file:////media/rodrigocosta/Data/"
+  shoes = mb_media_new ("shoes", "file:////media/rodrigocosta/Dados/"
 												 "primeirojoao/media/shoes.mp4",
 												 width * 0.15 /* left=15% */,
 												 height * 0.60 /* top=60% */,

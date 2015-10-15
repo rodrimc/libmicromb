@@ -45,10 +45,10 @@ void handler (MbEvent *evt)
 			ok = 1;
       break;
 		}
-    case MB_MOUSE_BUTTON_PRESS:
+    case MB_MOUSE_MOVE:
     {
-      if (ok && evt->mouse_button.button == MB_MOUSE_LEFT_BUTTON)
-        mb_media_set_pos (media, evt->mouse_button.x, evt->mouse_button.y);
+      if (ok)
+        mb_media_set_pos (media, evt->mouse_move.x, evt->mouse_move.y);
     }
 	}
 }
