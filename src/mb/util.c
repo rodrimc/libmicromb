@@ -63,7 +63,7 @@ handle_navigation_message (GstMessage *message)
           double x, y;
           gst_navigation_event_parse_mouse_move_event (event, &x, &y);
           mb_event = create_mouse_move_event (MB_MOUSE_MOVE, (int)x, (int) y);
-          
+
           break;
         }
         default:
@@ -118,6 +118,7 @@ handle_application_message (GstMessage *message)
           switch (gst_iterator_next (bin_it, &data))
           {
             case GST_ITERATOR_OK:
+            {
               element = GST_ELEMENT(g_value_get_object (&data));
               g_assert (element);
 
@@ -130,12 +131,19 @@ handle_application_message (GstMessage *message)
               gst_bin_remove(GST_BIN(bin), element);
               gst_element_set_state(element, GST_STATE_NULL);
               break;
+            }
             case GST_ITERATOR_RESYNC:
+            {  
               gst_iterator_resync (bin_it);
               break;
+            }
             case GST_ITERATOR_ERROR:
             case GST_ITERATOR_DONE:
+            {
               done = TRUE;
+              break;
+            }
+            default:
               break;
           }
         }
@@ -151,7 +159,7 @@ handle_application_message (GstMessage *message)
 }
 
 MbEvent *
-handle_state_change__message (GstMessage *message)
+handle_state_change_message (GstMessage *message)
 {
   MbEvent *mb_event = NULL;
   GstState old_state, new_state;
@@ -181,11 +189,11 @@ handle_state_change__message (GstMessage *message)
             GST_ELEMENT_NAME (source));
     }
   }
-  
+
   return mb_event;
 }
 
-  
+
 static gboolean
 bus_cb (GstBus *bus, GstMessage *message, gpointer data)
 {
@@ -196,7 +204,7 @@ bus_cb (GstBus *bus, GstMessage *message, gpointer data)
   {
     case GST_MESSAGE_STATE_CHANGED:
     {
-      mb_event = handle_state_change__message(message);
+      mb_event = handle_state_change_message(message);
       break;
     }
     case GST_MESSAGE_ELEMENT:
@@ -427,20 +435,20 @@ init (int width, int height, gboolean sync)
 
   /* video */
   _mb_global_data.video_mixer = gst_element_factory_make("videomixer", 
-                                                                "video_mixer");
+      "video_mixer");
   g_assert(_mb_global_data.video_mixer);
 
   _mb_global_data.video_sink = gst_element_factory_make("xvimagesink",
-                                                                "video_sink");
+      "video_sink");
   g_assert (_mb_global_data.video_sink);
 
   /* audio */
   _mb_global_data.audio_mixer = gst_element_factory_make("adder", 
-                                                                "audio_mixer");
+      "audio_mixer");
   g_assert(_mb_global_data.audio_mixer);
 
   _mb_global_data.audio_sink = gst_element_factory_make("autoaudiosink", 
-                                                                "audio_sink");
+      "audio_sink");
   g_assert (_mb_global_data.audio_sink);
 
   gst_bin_add_many(GST_BIN (_mb_global_data.pipeline),
@@ -854,7 +862,7 @@ create_state_change_event (MbEventType type, const char *media_name)
 
   return e;
 }
-  
+
 MbEvent *
 create_mouse_button_event (MbEventType type, MbMouseButton button, 
     int x, int y)
@@ -890,7 +898,7 @@ create_mouse_move_event (MbEventType type, int x, int y)
 
   return e;
 }
-  
+
 void
 notify_handler (MbEvent* evt)
 {
