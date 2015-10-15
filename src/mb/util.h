@@ -78,29 +78,44 @@ void
 notify_handler (MbEvent *event);
 
 
-//The callers of functions that return MbEvent * should freed
-//the pointer returned
+/*Callers of functions that return MbEvent * should free
+  the pointer returned */
 MbEvent *
 create_state_change_event (MbEventType, const char *); 
 
 MbEvent *
+create_mouse_button_event (MbEventType, MbMouseButton, int, int);
+
+MbEvent *
+create_mouse_move_event (MbEventType, int, int);
+
+MbEvent *
 create_app_event (MbEventType);
 
-//helpers
+/* helpers */
 gboolean
-set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad);
+set_video_bin(GstElement *, MbMedia *, GstPad *);
 
 gboolean
-set_audio_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad); 
+set_audio_bin(GstElement *, MbMedia *, GstPad *); 
 
-//callbacks
+MbEvent *
+handle_navigation_message (GstMessage *);
+
+MbEvent *
+handle_application_message (GstMessage *);
+
+MbEvent *
+handle_state_change_message (GstMessage *);
+
+/* callbacks */
 void
-pad_added_cb (GstElement *src, GstPad *new_pad, MbMedia *media);
+pad_added_cb (GstElement *, GstPad *, MbMedia *);
 
 GstPadProbeReturn
-stop_pad_cb (GstPad *pad, GstPadProbeInfo *info, gpointer media);
+stop_pad_cb (GstPad *, GstPadProbeInfo *, gpointer);
 
 GstPadProbeReturn
-eos_event_cb (GstPad *pad, GstPadProbeInfo * info, gpointer media);
+eos_event_cb (GstPad *, GstPadProbeInfo *, gpointer );
 
 #endif /* UTIL_H_ */
