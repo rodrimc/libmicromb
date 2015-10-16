@@ -124,6 +124,11 @@ void handler (MbEvent *evt)
       g_print ("Key released: %s\n", evt->keyboard.key);
       break;
     }
+    case MB_MEDIA_SELECTION:
+    {
+      g_print ("Media %s has been selected\n", evt->selection.media_name);
+      break;
+    }
     default:
 			g_printerr ("Unknown event received!\n");
 	}
