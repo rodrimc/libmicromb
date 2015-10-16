@@ -56,6 +56,21 @@ handle_navigation_message (GstMessage *message)
               nav_evt_type == GST_NAVIGATION_EVENT_MOUSE_BUTTON_PRESS ? 
               MB_MOUSE_BUTTON_PRESS : MB_MOUSE_BUTTON_RELEASE,
               button, (int)x, (int) y);
+
+          if (mb_event->type == MB_MOUSE_BUTTON_PRESS)
+          {
+            MbMedia *selected_media = compute_media_selection(x, y);
+            if (selected_media != NULL)
+            {
+              MbEvent *selection_event = 
+                create_media_selection_event (MB_MEDIA_SELECTION, 
+                    selected_media->name);
+
+              notify_handler (selection_event);
+              free (selection_event);
+            }
+          }
+
           break;
         }
         case GST_NAVIGATION_EVENT_MOUSE_MOVE:
@@ -443,6 +458,8 @@ init (int width, int height, gboolean sync)
   _mb_global_data.initialized     = FALSE;
   _mb_global_data.sync            = sync;
 
+  _mb_global_data.media_table = g_hash_table_new (g_str_hash, NULL);
+
   /* video */
   _mb_global_data.video_mixer = gst_element_factory_make("videomixer", 
       "video_mixer");
@@ -810,7 +827,9 @@ eos_event_cb (GstPad *pad, GstPadProbeInfo *info, gpointer data)
       MbEvent *event = create_state_change_event (MB_END, media->name);
       notify_handler (event);
       free (event);
-
+      
+      g_hash_table_remove (_mb_global_data.media_table, media->name);
+      
       msg_struct = gst_structure_new ("end-media", "event_type", G_TYPE_INT,
           APP_EVT_MEDIA_END, "data", G_TYPE_POINTER,
           media,
@@ -834,7 +853,7 @@ stop_pad_cb (GstPad *pad, GstPadProbeInfo *info, gpointer data)
   GstPad *peer;
 
   GST_DEBUG_OBJECT(pad, "pad is blocked now");
-  /* remove the probe first */
+  /* first remove the probe */
   gst_pad_remove_probe (pad, GST_PAD_PROBE_INFO_ID(info));
 
   media = (MbMedia *) data;
@@ -923,6 +942,55 @@ create_keyboard_event (MbEventType type, const char *key)
   e->keyboard = keyboard;
 
   return e;
+}
+
+MbEvent *
+create_media_selection_event (MbEventType type, const char *media_name)
+{
+  MbMediaSelectionEvent selection;
+
+  MbEvent *e = (MbEvent *) malloc (sizeof (MbEvent));
+  assert (e);
+
+  selection.type = type;
+  selection.media_name = media_name;
+
+  e->selection = selection;
+
+  return e;
+}
+
+MbMedia *
+compute_media_selection (int x, int y)
+{
+  MbMedia *selected = NULL;
+  GHashTableIter iter;
+  const char *key;
+  MbMedia *cur_media;
+
+  g_hash_table_iter_init (&iter, _mb_global_data.media_table);
+  while (g_hash_table_iter_next (&iter, (gpointer) &key, (gpointer)&cur_media))
+  {
+    /* if the point (x, y) is inside cur_media region */
+    if (x >= cur_media->x_pos && y >= cur_media->y_pos &&
+        x <= (cur_media->x_pos + cur_media->width) &&
+        y <= (cur_media->y_pos + cur_media->height)) 
+    {
+      if (selected == NULL)
+        selected = cur_media;
+      else /* which one is above the other? */
+      {
+        /*TODO: what if both have the same z_index? */
+        selected = selected->z_index > cur_media->z_index ?
+          selected : cur_media; 
+      }
+    }
+  }
+
+  if (selected != NULL)
+    g_print ("UTIL: selected name: %s\n", selected->name);
+
+  return selected;
 }
 
 void

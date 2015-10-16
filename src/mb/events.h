@@ -38,10 +38,10 @@ typedef enum
 {
   /* FILL ME*/
   /* Application internal event */
-  MB_APP_INIT_DONE = 0x100, 
+  MB_APP_INIT_DONE            = 0x100, 
 
   //Presentation
-  MB_BEGIN        = 0x200,
+  MB_BEGIN                    = 0x200,
   MB_END, 
   MB_PAUSE,
   MB_REMOVED, /*media has been removed from the pipeline.
@@ -49,11 +49,14 @@ typedef enum
                 (mb_media_free) */
 
   /* Input */
-  MB_MOUSE_BUTTON_PRESS  = 0x300,
+  MB_MOUSE_BUTTON_PRESS       = 0x300,
   MB_MOUSE_BUTTON_RELEASE,
   MB_MOUSE_MOVE,
   MB_KEY_PRESS,
   MB_KEY_RELEASE,
+
+  /* Selection */
+  MB_MEDIA_SELECTION          = 0x400,
 
   /* Attribution */
 } MbEventType; /*!< This enum holds all the events this library
@@ -82,9 +85,15 @@ typedef struct MbKeyboardEvent
 
 typedef struct MbStateChangeEvent
 {
-  uint32_t type;
+  uint32_t type;   
   const char *media_name;
 } MbStateChangeEvent;
+
+typedef struct MbMediaSelectionEvent
+{
+  uint32_t type; /* MB_MEDIA_SELECTION */
+  const char *media_name;
+} MbMediaSelectionEvent;
 
 typedef union MbEvent
 {
@@ -93,7 +102,7 @@ typedef union MbEvent
   MbMouseButtonEvent mouse_button;
   MbMouseMoveEvent mouse_move;
   MbKeyboardEvent keyboard;
-
+  MbMediaSelectionEvent selection;
 } MbEvent; /*!< Represetation of events to clients of this library */
 
 #endif //EVENTS_H

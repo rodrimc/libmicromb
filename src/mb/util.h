@@ -25,6 +25,7 @@
 #include <gst/gst.h>
 #include <assert.h>
 #include "mb.h"
+#include <glib.h>
 
 typedef enum
 {
@@ -61,6 +62,7 @@ typedef struct MbData
 	GMutex mutex;
   gboolean sync;
   gboolean initialized;
+  GHashTable *media_table;
 
   //handlers
 	void (*evt_handler)(MbEvent*);
@@ -93,6 +95,9 @@ MbEvent *
 create_keyboard_event (MbEventType, const char *);
 
 MbEvent *
+create_media_selection_event (MbEventType, const char *);
+
+MbEvent *
 create_app_event (MbEventType);
 
 /* helpers */
@@ -110,6 +115,9 @@ handle_application_message (GstMessage *);
 
 MbEvent *
 handle_state_change_message (GstMessage *);
+
+MbMedia *
+compute_media_selection (int x, int y);
 
 /* callbacks */
 void

@@ -117,6 +117,8 @@ mb_media_start (MbMedia *media)
 
     } while (current_state != GST_STATE_PLAYING);
   }
+
+  g_hash_table_insert (_mb_global_data.media_table, media->name, media);
 	
   return TRUE;
 }
@@ -482,6 +484,8 @@ mb_clean_up ()
 		g_main_loop_unref(_mb_global_data.loop);
 		g_thread_unref(_mb_global_data.loop_thread);
 	}
+
+  g_hash_table_unref (_mb_global_data.media_table);
 
 	gst_deinit();
 }
