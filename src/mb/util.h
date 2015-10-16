@@ -90,6 +90,9 @@ MbEvent *
 create_mouse_move_event (MbEventType, int, int);
 
 MbEvent *
+create_keyboard_event (MbEventType, const char *);
+
+MbEvent *
 create_app_event (MbEventType);
 
 /* helpers */

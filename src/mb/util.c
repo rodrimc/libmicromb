@@ -61,10 +61,20 @@ handle_navigation_message (GstMessage *message)
         case GST_NAVIGATION_EVENT_MOUSE_MOVE:
         {
           double x, y;
-          gst_navigation_event_parse_mouse_move_event (event, &x, &y);
-          mb_event = create_mouse_move_event (MB_MOUSE_MOVE, (int)x, (int) y);
+          if (gst_navigation_event_parse_mouse_move_event (event, &x, &y))
+            mb_event = create_mouse_move_event (MB_MOUSE_MOVE, (int)x, 
+                (int) y);
 
           break;
+        }
+        case GST_NAVIGATION_EVENT_KEY_PRESS:
+        case GST_NAVIGATION_EVENT_KEY_RELEASE:
+        {
+          const char *key;
+          if (gst_navigation_event_parse_key_event (event, &key))
+            mb_event = create_keyboard_event (
+              nav_evt_type == GST_NAVIGATION_EVENT_KEY_PRESS ? 
+              MB_KEY_PRESS : MB_KEY_RELEASE, key);
         }
         default:
           break;  
@@ -895,6 +905,22 @@ create_mouse_move_event (MbEventType type, int x, int y)
   mouse_move.y = y;
 
   e->mouse_move = mouse_move;
+
+  return e;
+}
+
+MbEvent *
+create_keyboard_event (MbEventType type, const char *key)
+{
+  MbKeyboardEvent keyboard;
+
+  MbEvent *e = (MbEvent *) malloc (sizeof (MbEvent));
+  assert (e);
+
+  keyboard.type = type;
+  keyboard.key = key;
+
+  e->keyboard = keyboard;
 
   return e;
 }

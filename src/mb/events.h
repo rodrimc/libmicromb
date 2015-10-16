@@ -52,15 +52,16 @@ typedef enum
   MB_MOUSE_BUTTON_PRESS  = 0x300,
   MB_MOUSE_BUTTON_RELEASE,
   MB_MOUSE_MOVE,
+  MB_KEY_PRESS,
+  MB_KEY_RELEASE,
 
   /* Attribution */
 } MbEventType; /*!< This enum holds all the events this library
                  use to communicate with client applications */
 
-typedef struct MbMousePressEvent
+typedef struct MbMouseButtonEvent
 {
-  uint32_t type;  /* MB_MOUSE_BUTTON_PRESS or
-                     MB_MOUSE_BUTTON_RELEASE */
+  uint32_t type;  /* MB_MOUSE_BUTTON_PRESS or MB_MOUSE_BUTTON_RELEASE */
   uint32_t button;
   int x;
   int y;
@@ -73,21 +74,25 @@ typedef struct MbMouseMoveEvent
   int y;
 } MbMouseMoveEvent;
 
+typedef struct MbKeyboardEvent
+{
+  uint32_t type; /* MB_KEY_PRESS or MB_KEY_RELEASE */
+  const char *key;
+} MbKeyboardEvent;
 
 typedef struct MbStateChangeEvent
 {
   uint32_t type;
   const char *media_name;
-
 } MbStateChangeEvent;
 
 typedef union MbEvent
 {
-  uint32_t type; /*this field should be present in 
-                   all event structures*/
+  uint32_t type; /*this field should be present in all event structures*/
   MbStateChangeEvent state_change;
   MbMouseButtonEvent mouse_button;
   MbMouseMoveEvent mouse_move;
+  MbKeyboardEvent keyboard;
 
 } MbEvent; /*!< Represetation of events to clients of this library */
 
