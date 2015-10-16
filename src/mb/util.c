@@ -57,7 +57,8 @@ handle_navigation_message (GstMessage *message)
               MB_MOUSE_BUTTON_PRESS : MB_MOUSE_BUTTON_RELEASE,
               button, (int)x, (int) y);
 
-          if (mb_event->type == MB_MOUSE_BUTTON_PRESS)
+          if (button == MB_MOUSE_LEFT_BUTTON && 
+              mb_event->type == MB_MOUSE_BUTTON_PRESS)
           {
             MbMedia *selected_media = compute_media_selection(x, y);
             if (selected_media != NULL)
@@ -986,9 +987,6 @@ compute_media_selection (int x, int y)
       }
     }
   }
-
-  if (selected != NULL)
-    g_print ("UTIL: selected name: %s\n", selected->name);
 
   return selected;
 }
