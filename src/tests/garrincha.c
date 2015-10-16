@@ -108,6 +108,22 @@ void handler (MbEvent *evt)
           evt->mouse_button.y);
       break;
     }
+    case MB_MOUSE_MOVE:
+    {
+      g_print ("Mouse move event: (%d, %d) (x, y)\n", evt->mouse_move.x,
+          evt->mouse_move.y);
+      break;
+    }
+    case MB_KEY_PRESS:
+    {
+      g_print ("Key pressed: %s\n", evt->keyboard.key);
+      break;
+    }
+    case MB_KEY_RELEASE:
+    {
+      g_print ("Key released: %s\n", evt->keyboard.key);
+      break;
+    }
     default:
 			g_printerr ("Unknown event received!\n");
 	}
