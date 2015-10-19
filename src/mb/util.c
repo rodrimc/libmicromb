@@ -22,6 +22,7 @@
 #include "util.h"
 #include <string.h>
 #include <stdlib.h>
+#include <gst/video/navigation.h>
 #include <gst/video/video.h>
 
 static char* audio_caps = "audio/x-raw,rate=48000";
@@ -151,7 +152,7 @@ handle_application_message (GstMessage *message)
               /* we increment the ref_count to destroy this element
                * only when calling the function mb_media_free ()
                */
-              g_print ("Removing %s from pipeline.\n", media->name);
+              g_debug ("Removing %s from pipeline.\n", media->name);
 
               gst_object_ref(element);
               gst_bin_remove(GST_BIN(bin), element);
@@ -256,7 +257,7 @@ bus_cb (GstBus *bus, GstMessage *message, gpointer data)
       gchar *debug;
 
       gst_message_parse_error (message, &err, &debug);
-      g_print ("Error: %s\n", err->message);
+      g_debug ("Error: %s\n", err->message);
       g_error_free (err);
       g_free (debug);
 
@@ -369,7 +370,7 @@ set_background ()
       !gst_element_link_many (audio_src, audio_conv, audio_resample,
         audio_capsfilter, NULL))
   {
-    g_printerr ("Could not link background elements together.\n");
+    g_debug ("Could not link background elements together.\n");
     mb_clean_up ();
   }
   else
@@ -391,11 +392,9 @@ set_background ()
 
     ret = gst_pad_link (src_pad, mixer_sink_pad);
     if (GST_PAD_LINK_FAILED(ret))
-      g_print (" Background video link failed.\n");
+      g_debug (" Background video link failed.\n");
     else
-    {
-      g_print (" Background video link succeeded.\n");
-    }
+      g_debug (" Background video link succeeded.\n");
 
     gst_object_unref (src_pad);
     gst_object_unref (mixer_sink_pad);
@@ -412,11 +411,9 @@ set_background ()
 
     ret = gst_pad_link (src_pad, mixer_sink_pad);
     if (GST_PAD_LINK_FAILED(ret))
-      g_print (" Background audio link failed.\n");
+      g_debug (" Background audio link failed.\n");
     else
-    {
-      g_print (" Background audio link succeeded.\n");
-    }
+      g_debug (" Background audio link succeeded.\n");
 
     audio_caps = gst_pad_query_caps (src_pad, NULL);
     audio_caps_structure = gst_caps_get_structure (audio_caps, 0);
@@ -438,7 +435,7 @@ init (int width, int height, gboolean sync)
 
   if (!gst_init_check(NULL, NULL, NULL))
   {
-    g_printerr ("Failed to initialize gstreamer...\n");
+    g_debug ("Failed to initialize gstreamer...\n");
     return FALSE;
   }
 
@@ -487,7 +484,7 @@ init (int width, int height, gboolean sync)
   if (!gst_element_link(_mb_global_data.video_mixer,
         _mb_global_data.video_sink))
   {
-    g_printerr ("Could not link video mixer and sink together.\n");
+    g_debug ("Could not link video mixer and sink together.\n");
     mb_clean_up ();
     return FALSE;
   }
@@ -495,7 +492,7 @@ init (int width, int height, gboolean sync)
   if (!gst_element_link(_mb_global_data.audio_mixer, 
         _mb_global_data.audio_sink))
   {
-    g_printerr ("Could not link audio mixer and sink together.\n");
+    g_debug ("Could not link audio mixer and sink together.\n");
     mb_clean_up ();
     return FALSE;
   }
@@ -526,7 +523,7 @@ init (int width, int height, gboolean sync)
           (GThreadFunc) main_loop_thread,
           NULL)) == NULL)
   {
-    g_printerr ("Could not create message handler thread.\n");
+    g_debug ("Could not create message handler thread.\n");
     mb_clean_up();
     return FALSE;
   }
@@ -547,14 +544,14 @@ pad_added_cb (GstElement *src, GstPad *new_pad, MbMedia *media)
 
   g_assert (media);
 
-  g_print ("Received new pad '%s' from '%s'\n", GST_PAD_NAME(new_pad),
+  g_debug ("Received new pad '%s' from '%s'\n", GST_PAD_NAME(new_pad),
       media->name);
 
   new_pad_caps = gst_pad_query_caps (new_pad, NULL);
   new_pad_struct = gst_caps_get_structure (new_pad_caps, 0);
   new_pad_type = gst_structure_get_name (new_pad_struct);
 
-  g_print ("New pad type: %s\n", new_pad_type);
+  g_debug ("New pad type: %s\n", new_pad_type);
 
   g_mutex_lock(&(media->mutex));
 
@@ -626,7 +623,7 @@ set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
       NULL);
   if (!gst_element_link (media->video_scaler, media->video_filter))
   {
-    g_printerr ("Could not link elements together.\n");
+    g_debug ("Could not link elements together.\n");
     gst_object_unref (media->video_scaler);
     gst_object_unref (media->video_filter);
     return FALSE;
@@ -648,7 +645,7 @@ set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
 
     if (!gst_element_link (media->image_freezer, media->video_scaler))
     {
-      g_printerr("Could not link image element.\n");
+      g_debug("Could not link image element.\n");
       gst_object_unref(media->image_freezer);
       return FALSE;
     }
@@ -662,9 +659,9 @@ set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
   ret = gst_pad_link (decoder_src_pad, sink_pad);
 
   if (GST_PAD_LINK_FAILED(ret))
-    g_print (" Link failed.\n");
+    g_debug (" Link failed.\n");
   else
-    g_print (" Link succeeded.\n");
+    g_debug (" Link succeeded.\n");
 
   ghost_pad = gst_ghost_pad_new (
       "v_src", gst_element_get_static_pad (media->video_filter, "src"));
@@ -677,13 +674,13 @@ set_video_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
   g_assert (output_sink_pad);
 
   media->video_pad_name = gst_pad_get_name (output_sink_pad);
-  g_print ("videomixer: new pad requested (%s)\n", media->video_pad_name);
+  g_debug ("videomixer: new pad requested (%s)\n", media->video_pad_name);
 
   ret = gst_pad_link (ghost_pad, output_sink_pad);
   if (GST_PAD_LINK_FAILED(ret))
   {
     return_code = FALSE;
-    g_print (" Could not link %s and videomixer together\n", media->name);
+    g_debug (" Could not link %s and videomixer together\n", media->name);
   }
   else
   {
@@ -745,7 +742,7 @@ set_audio_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
   if (!gst_element_link_many (media->audio_volume, media->audio_converter,
         media->audio_resampler, media->audio_filter, NULL))
   {
-    g_print ("Could not link audio_converter and audio_volume together\n.");
+    g_debug ("Could not link audio_converter and audio_volume together\n.");
     return_code = FALSE;
   }
   else
@@ -757,11 +754,11 @@ set_audio_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
     if (GST_PAD_LINK_FAILED(ret))
     {
       return_code = FALSE;
-      g_print (" Link failed.\n");
+      g_debug (" Link failed.\n");
     }
     else
     {
-      g_print (" Link succeeded.\n");
+      g_debug (" Link succeeded.\n");
 
       g_object_set (G_OBJECT(media->audio_volume), "volume", media->volume,
           NULL);
@@ -782,13 +779,13 @@ set_audio_bin(GstElement *bin, MbMedia *media, GstPad *decoder_src_pad)
       g_assert(output_sink_pad);
 
       media->audio_pad_name = gst_pad_get_name(output_sink_pad);
-      g_print ("audiomixer: new pad requested (%s)\n", media->audio_pad_name);
+      g_debug ("audiomixer: new pad requested (%s)\n", media->audio_pad_name);
 
       ret = gst_pad_link (ghost_pad, output_sink_pad);
       if (GST_PAD_LINK_FAILED(ret))
       {
         return_code = FALSE;
-        g_print (" Could not link %s and audiomixer together.\n", media->name);
+        g_debug (" Could not link %s and audiomixer together.\n", media->name);
       }
 
       gst_object_unref (output_sink_pad);
@@ -820,8 +817,8 @@ eos_event_cb (GstPad *pad, GstPadProbeInfo *info, gpointer data)
     g_mutex_unlock (&(media->mutex));
 
     g_object_get (media->decoder, "uri", &uri, NULL);
-    g_print ("EOS received (%s): %s.\n", media->name, uri);
-    g_print ("%s still has %d valid pad(s).\n", media->name, pads);
+    g_debug ("EOS received (%s): %s.\n", media->name, uri);
+    g_debug ("%s still has %d valid pad(s).\n", media->name, pads);
 
     if (pads == 0)
     {
@@ -838,7 +835,7 @@ eos_event_cb (GstPad *pad, GstPadProbeInfo *info, gpointer data)
           NULL);
 
       message = gst_message_new_application (GST_OBJECT(bin), msg_struct);
-      g_print ("Posting event\n");
+      g_debug ("Posting event\n");
       gst_bus_post (_mb_global_data.bus, message);
     }
     g_free (uri);

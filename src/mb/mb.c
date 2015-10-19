@@ -187,7 +187,7 @@ mb_media_set_size (MbMedia *media, int width, int height)
 
 	if (!media->video_filter)
 	{
-		g_printerr ("Video stream not found\n");
+		g_debug ("Video stream not found\n");
 		return FALSE;
 	}
 
@@ -228,7 +228,7 @@ mb_media_set_volume (MbMedia *media, gdouble volume)
 		return_code = FALSE;
 
 		media->volume = volume;
-		g_printerr ("This media has no audio output yet\n");
+		g_debug ("This media has no audio output yet\n");
 	}
 	else
 	{
@@ -356,7 +356,7 @@ mb_media_set_alpha (MbMedia *media, double alpha)
 		return_code = FALSE;
 		media->alpha = alpha;
 
-		g_printerr ("This media has no visual output\n");
+		g_debug ("This media has no visual output\n");
 	}
 	else
 	{
