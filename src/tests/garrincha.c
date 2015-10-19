@@ -153,18 +153,18 @@ int main (int argc, char *argv[])
 
   n = argc - 1;
 
-  background = mb_media_new ("background", "file:////media/rodrigocosta/Dados/"
+  background = mb_media_new ("background", "file:////media/rodrigocosta/Data/"
 														 "primeirojoao/media/background.png", 0, 0, 0,
 														 width, height);
 
-  anim = mb_media_new ("animation", "file:////media/rodrigocosta/Dados/"
+  anim = mb_media_new ("animation", "file:////media/rodrigocosta/Data/"
 											 "primeirojoao/media/animGar.mp4", 0, 0, 1,
 											 width, height);
 
-  choro = mb_media_new ("choro", "file:////media/rodrigocosta/Dados/"
+  choro = mb_media_new ("choro", "file:////media/rodrigocosta/Data/"
 												 "primeirojoao/media/choro.mp4", 0, 0, 0, 0, 0);
 
-  drible = mb_media_new ("drible", "file:////media/rodrigocosta/Dados/"
+  drible = mb_media_new ("drible", "file:////media/rodrigocosta/Data/"
 												 "primeirojoao/media/drible.mp4",
 												 width * 0.05 /* left=5% */,
 												 height * 0.067 /* top=6.7% */,
@@ -172,7 +172,7 @@ int main (int argc, char *argv[])
 												 width * 0.185 /* width=18.5% */,
 												 height * 0.185 /* height=18.5% */);
 
-  shoes = mb_media_new ("shoes", "file:////media/rodrigocosta/Dados/"
+  shoes = mb_media_new ("shoes", "file:////media/rodrigocosta/Data/"
 												 "primeirojoao/media/shoes.mp4",
 												 width * 0.15 /* left=15% */,
 												 height * 0.60 /* top=60% */,

@@ -5,7 +5,8 @@ bin_PROGRAMS = garrincha \
               test3 \
               test4 \
 							test5 \
-							test6
+							test6 \
+							test7
 
 MB_SOURCES=
 
@@ -28,6 +29,7 @@ test3_SOURCES = test3.c $(MB_SOURCES)
 test4_SOURCES = test4.c $(MB_SOURCES)
 test5_SOURCES = test5.c $(MB_SOURCES)
 test6_SOURCES = test6.c $(MB_SOURCES)
+test7_SOURCES = test7.c $(MB_SOURCES)
 				
 garrincha_CFLAGS = $(GSTREAMER_VIDEO_CFLAGS) $(MICROMB_CFLAGS)
 garrincha_LDADD = $(GSTREAMER_VIDEO_LIBS) $(MICROMB_LDFLAGS)
@@ -52,3 +54,6 @@ test5_LDADD = $(GSTREAMER_VIDEO_LIBS) $(MICROMB_LDFLAGS)
 
 test6_CFLAGS = $(GSTREAMER_VIDEO_CFLAGS) $(MICROMB_CFLAGS)
 test6_LDADD = $(GSTREAMER_VIDEO_LIBS) $(MICROMB_LDFLAGS)
+
+test7_CFLAGS = $(GSTREAMER_VIDEO_CFLAGS) $(MICROMB_CFLAGS)
+test7_LDADD = $(GSTREAMER_VIDEO_LIBS) $(MICROMB_LDFLAGS)
