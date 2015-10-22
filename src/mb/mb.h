@@ -74,6 +74,11 @@ typedef struct
 gboolean
 mb_init ();
 
+uint64_t
+mb_get_time ();
+
+gboolean
+mb_is_initialized ();
 
 /*!
  * \brief	Initializes the library.

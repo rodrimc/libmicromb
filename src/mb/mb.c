@@ -35,6 +35,25 @@ mb_init ()
 	return init (DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, TRUE);
 }
 
+uint64_t
+mb_get_time ()
+{
+  int64_t time_now = 0;
+
+  if (_mb_global_data.clock_provider != NULL)
+    time_now = gst_clock_get_time (_mb_global_data.clock_provider);
+
+  return time_now;
+}
+
+gboolean
+mb_is_initialized ()
+{
+  /* We need an atomic operation because one can initialize the library
+   * using the async mode. */
+  return g_atomic_int_get (&_mb_global_data.initialized);
+}
+
 int
 mb_init_args (int width, int height, gboolean sync)
 {
@@ -94,39 +113,39 @@ mb_media_new (const char *media_name, const char *uri,
 gboolean
 mb_media_start (MbMedia *media)
 {
-	GstStateChange ret;
-	GstState current_state;
-  MbEvent *event;
+  GstStateChangeReturn ret;
+  GstState current_state;
 
-	g_assert (media != NULL);
+  g_assert (media != NULL);
 
-	gst_bin_add (GST_BIN(_mb_global_data.pipeline), media->bin);
-
-	media->start_offset = gst_clock_get_time(_mb_global_data.clock_provider);
-
-	gst_element_set_state (media->bin, GST_STATE_PLAYING);
-  
-  if (_mb_global_data.sync == TRUE)
+  if (gst_bin_add (GST_BIN(_mb_global_data.pipeline), media->bin) == TRUE)
   {
-    do
-    {
-      ret = gst_element_get_state (media->bin, &current_state,
-          NULL, GST_CLOCK_TIME_NONE);
-      if (ret == GST_STATE_CHANGE_FAILURE)
-        return FALSE;
+    media->start_offset = gst_clock_get_time(_mb_global_data.clock_provider);
 
-    } while (current_state != GST_STATE_PLAYING);
+    gst_element_set_state (media->bin, GST_STATE_PLAYING);
+
+    if (_mb_global_data.sync == TRUE)
+    {
+      do
+      {
+        ret = gst_element_get_state (media->bin, &current_state,
+            NULL, GST_CLOCK_TIME_NONE);
+        if (ret == GST_STATE_CHANGE_FAILURE)
+          return FALSE;
+
+      } while (current_state != GST_STATE_PLAYING);
+    }
+
+    g_hash_table_insert (_mb_global_data.media_table, media->name, media);
+    return TRUE;
   }
 
-  g_hash_table_insert (_mb_global_data.media_table, media->name, media);
-	
-  return TRUE;
+  return FALSE;
 }
 
 gboolean
 mb_media_stop (MbMedia *media)
 {
-	GstStateChange ret;
 	GstIterator *it = NULL;
   GValue data = G_VALUE_INIT;
 	GstPad *pad = NULL;

@@ -310,8 +310,8 @@ has_image_extension (const char *uri)
 static void
 set_background ()
 {
-  GstElement *bg_src = NULL, *bg_scaler = NULL, *bg_filter = NULL,
-             *bg_capsfilter = NULL, *audio_src = NULL, *audio_conv = NULL,
+  GstElement *bg_src = NULL, *bg_scaler = NULL, *bg_capsfilter = NULL, 
+             *audio_src = NULL, *audio_conv = NULL,
              *audio_resample = NULL, *audio_capsfilter = NULL;
   GstCaps *caps;
 
@@ -379,7 +379,6 @@ set_background ()
     GstPadLinkReturn ret;
     GstCaps *audio_caps = NULL;
     GstStructure *audio_caps_structure = NULL;
-    const gchar *name = NULL;
     int rate;
 
     /* video */
@@ -417,7 +416,6 @@ set_background ()
 
     audio_caps = gst_pad_query_caps (src_pad, NULL);
     audio_caps_structure = gst_caps_get_structure (audio_caps, 0);
-    name = gst_structure_get_name (audio_caps_structure);
     if (gst_structure_has_field(audio_caps_structure, "rate"))
       gst_structure_get_int(audio_caps_structure, "rate", &rate);
 
@@ -535,7 +533,6 @@ init (int width, int height, gboolean sync)
 void
 pad_added_cb (GstElement *src, GstPad *new_pad, MbMedia *media)
 {
-  GstPadLinkReturn ret;
   GstCaps *new_pad_caps = NULL;
   GstStructure *new_pad_struct = NULL;
   GstPad *peer = NULL;
@@ -846,7 +843,6 @@ eos_event_cb (GstPad *pad, GstPadProbeInfo *info, gpointer data)
 GstPadProbeReturn
 stop_pad_cb (GstPad *pad, GstPadProbeInfo *info, gpointer data)
 {
-  GstElement *bin = NULL;
   MbMedia *media = NULL;
   GstPad *peer;
 
@@ -878,14 +874,11 @@ create_app_event (MbEventType type)
 MbEvent *
 create_state_change_event (MbEventType type, const char *media_name)
 {
-  MbStateChangeEvent state_change;
   MbEvent *e = (MbEvent *) malloc (sizeof (MbEvent));
   assert (e);
 
-  state_change.type = type;
-  state_change.media_name = media_name;
-
-  e->state_change = state_change;
+  e->state_change.type = type;
+  e->state_change.media_name = media_name;
 
   return e;
 }
@@ -894,34 +887,26 @@ MbEvent *
 create_mouse_button_event (MbEventType type, MbMouseButton button, 
     int x, int y)
 {
-  MbMouseButtonEvent mouse_button;
-
   MbEvent *e = (MbEvent *) malloc (sizeof (MbEvent));
   assert (e);
 
-  mouse_button.type = type;
-  mouse_button.button = button;
-  mouse_button.x = x;
-  mouse_button.y = y;
-
-  e->mouse_button = mouse_button;
-
+  e->mouse_button.type = type;
+  e->mouse_button.button = button;
+  e->mouse_button.x = x;
+  e->mouse_button.y = y;
+  
   return e;
 }  
 
 MbEvent *
 create_mouse_move_event (MbEventType type, int x, int y)
 {
-  MbMouseMoveEvent mouse_move;
-
   MbEvent *e = (MbEvent *) malloc (sizeof (MbEvent));
   assert (e);
 
-  mouse_move.type = type;
-  mouse_move.x = x;
-  mouse_move.y = y;
-
-  e->mouse_move = mouse_move;
+  e->mouse_move.type = type;
+  e->mouse_move.x = x;
+  e->mouse_move.y = y;
 
   return e;
 }
@@ -929,15 +914,11 @@ create_mouse_move_event (MbEventType type, int x, int y)
 MbEvent *
 create_keyboard_event (MbEventType type, const char *key)
 {
-  MbKeyboardEvent keyboard;
-
   MbEvent *e = (MbEvent *) malloc (sizeof (MbEvent));
   assert (e);
 
-  keyboard.type = type;
-  keyboard.key = key;
-
-  e->keyboard = keyboard;
+  e->keyboard.type = type;
+  e->keyboard.key = key;
 
   return e;
 }
@@ -945,15 +926,11 @@ create_keyboard_event (MbEventType type, const char *key)
 MbEvent *
 create_media_selection_event (MbEventType type, const char *media_name)
 {
-  MbMediaSelectionEvent selection;
-
   MbEvent *e = (MbEvent *) malloc (sizeof (MbEvent));
   assert (e);
 
-  selection.type = type;
-  selection.media_name = media_name;
-
-  e->selection = selection;
+  e->selection.type = type;
+  e->selection.media_name = media_name;
 
   return e;
 }
