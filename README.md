@@ -9,23 +9,5 @@ handle media components. The main purpose of this project is to provide a simple
 to facilitate one to add multimedia capabilities to applications. Under the roof, the library
 makes the appropriate calls to the GStreamer API.
 
-##API
-The mb.h file contains the definition of the external API that should be used. 
-
-Some examples of how to use the library are available in the src/tests folder. 
-One should notice that some of the examples contains hardcoded file paths. Before trying to run
-the examples it's necessary to change those paths.
-
-##How to compile
-./bootstrap
-
-./configure
-
-./make
-
-./make install
-
-##Dependencies
-This library depends on the [GStreamer 1.x] (http://gstreamer.freedesktop.org/) and [GLib] (https://developer.gnome.org/glib/stable/).
-
-This is an ongoing project. Feel free to contribute.
+#LibPlay
+This project has been incorporated within the [LibPlay] (http://github.com/TeleMidia/LibPlay) library and is no longer maintained.
